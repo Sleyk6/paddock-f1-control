@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PADDOCK F1 Control</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="fixture-banner" class="banner hidden" role="alert">
+  TEST FIXTURE MODE: synthetic, invented data for testing. Not real Formula 1 results.
+</div>
+<header class="top">
+  <div class="brand"><span class="mark"></span><div><h1>PADDOCK F1 CONTROL</h1><p class="sub">Personal race data dashboard</p></div></div>
+  <form class="controls" id="controls">
+    <label>Season <input id="season" type="number" min="1950" max="2100" value="2024"></label>
+    <label>Race <select id="round"></select></label>
+    <button type="submit">Load</button>
+  </form>
+</header>
+<nav class="tabs" id="tabs" role="tablist">
+  <button data-tab="calendar" class="active">Calendar</button>
+  <button data-tab="standings">Standings</button>
+  <button data-tab="results">Results</button>
+  <button data-tab="compare">Compare</button>
+  <button data-tab="strategy">Strategy</button>
+  <button data-tab="telemetry">Telemetry</button>
+</nav>
+<main>
+  <section id="status" class="status"></section>
+  <section id="view" class="view" aria-live="polite"></section>
+</main>
+<footer class="foot">
+  Data: <a href="https://github.com/jolpica/jolpica-f1">Jolpica-F1</a> (Ergast-compatible) and
+  <a href="https://openf1.org">OpenF1</a>. Unofficial personal project, not affiliated with Formula 1 companies.
+  <span id="health"></span>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>
