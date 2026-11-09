@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1 (2026-11-09)
+- Team colours everywhere (standings, constructors, points, results): official OpenF1 colours for the season's latest session, built-in fallback otherwise.
+- Points chart: teammates share a colour, second driver dashed.
+- Cross-check: flags a driver whose team differs between Jolpica results and the latest OpenF1 session.
+
+## 0.6.0 (2026-11-09)
+- Countdown bar to the next real session (practice, sprint, qualifying, race) with flag and lights-out time; flashes LIVE during a session.
+- Calendar API now includes each weekend's session times.
+
 ## 0.5.1 (2026-11-09)
 - Tyre icons (original design: tyre with compound-coloured ring and S/M/H/I/W letter) with stint lengths in Results; also in the Planner tyre model table.
 

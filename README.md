@@ -2,7 +2,7 @@
 
 A personal Formula 1 data dashboard that runs on your own computer. It shows the race calendar, standings, results, a two-driver lap comparison, tyre strategy and pit stops, and single-lap telemetry (speed, throttle, brake, gear).
 
-**Status:** v0.2.0. Live data verified on the founder PC with v0.1.0; v0.2 features are tested with synthetic data. See CHANGELOG.
+**Status:** v0.6.1. Standard-library Python server + plain JavaScript, 45 automated tests. Live data needs only the free public APIs; see CHANGELOG.
 
 ## Requirements
 - Python 3.10 or newer. Nothing to `pip install`: it uses the standard library only.

@@ -346,3 +346,36 @@ class ServerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CountdownSessionsTest(unittest.TestCase):
+    def test_sessions_sorted_with_race_last(self):
+        from f1control.service import _sessions
+        r = {"date": "2026-11-21", "time": "06:00:00Z",
+             "FirstPractice": {"date": "2026-11-20", "time": "00:30:00Z"},
+             "Qualifying": {"date": "2026-11-21", "time": "04:00:00Z"},
+             "SecondPractice": {"date": "2026-11-20", "time": "04:00:00Z"}}
+        names = [s["name"] for s in _sessions(r)]
+        self.assertEqual(names, ["Practice 1", "Practice 2", "Qualifying", "Race"])
+
+    def test_calendar_includes_sessions(self):
+        races = build_service(True, "")[0].calendar(2024)["data"]["races"]
+        self.assertTrue(all(r["sessions"] and r["sessions"][-1]["name"] == "Race" for r in races))
+
+
+class TeamIdentityTest(unittest.TestCase):
+    def test_team_key_aliases(self):
+        from f1control.service import team_key
+        cases = {"RB F1 Team": "racing_bulls", "Racing Bulls": "racing_bulls", "Red Bull": "red_bull",
+                 "Red Bull Racing": "red_bull", "Kick Sauber": "sauber", "Sauber": "sauber", "Audi": "audi",
+                 "Cadillac F1 Team": "cadillac", "Haas F1 Team": "haas", "Alpine F1 Team": "alpine",
+                 "Aston Martin": "aston_martin", "rb": "racing_bulls", "McLaren": "mclaren"}
+        for name, key in cases.items():
+            self.assertEqual(team_key(name), key, name)
+
+    def test_standings_and_points_carry_team_colours(self):
+        svc = build_service(True, "")[0]
+        st = svc.standings(2024)["data"]
+        self.assertTrue(all("team_colour" in d and "team_key" in d for d in st["drivers"]))
+        pts = svc.points_tracker(2024)["data"]
+        self.assertTrue(all("team_colour" in s and "second_driver" in s for s in pts["series"]))

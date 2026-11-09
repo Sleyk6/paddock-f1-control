@@ -260,3 +260,23 @@ svg.tyre .ring.c-INTERMEDIATE { stroke: var(--inter); } svg.tyre .ring.c-WET { s
 .tyreicons { display: flex; gap: 6px; align-items: center; }
 .tstint { display: inline-flex; align-items: center; gap: 2px; }
 .tl { font: 11px var(--mono); color: var(--muted); }
+
+/* ---------- v0.6: next-session countdown ---------- */
+.countdown { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; padding: 10px 24px;
+  background: linear-gradient(90deg, rgba(225, 6, 0, .18), rgba(4, 6, 11, .9) 55%); border-bottom: 1px solid var(--edge);
+  font-variant-numeric: tabular-nums; }
+.cd-tag { font: 700 11px var(--mono); letter-spacing: .18em; color: #fff; background: var(--red); padding: 3px 8px; border-radius: 3px; }
+.cd-name { font-weight: 700; letter-spacing: .03em; }
+.cd-sess { font: 12px var(--mono); color: #c9d3e4; letter-spacing: .06em; }
+.cd-time { font: 700 22px var(--mono); color: #fff; letter-spacing: .06em; text-shadow: 0 0 14px rgba(225, 6, 0, .55); }
+.cd-time small { font-size: 11px; color: #8a96ad; margin: 0 6px 0 2px; letter-spacing: .1em; }
+.cd-race { font: 12px var(--mono); color: #8a96ad; margin-left: auto; }
+.countdown.live .cd-tag { animation: cdpulse 1s steps(2, start) infinite; }
+.countdown.live .cd-time { color: var(--red); }
+@keyframes cdpulse { 50% { background: #fff; color: var(--red); } }
+@media (max-width: 760px) { .cd-race { margin-left: 0; } .cd-time { font-size: 18px; } }
+@media (prefers-reduced-motion: reduce) { .countdown.live .cd-tag { animation: none; } }
+
+/* ---------- v0.6.1: team colours everywhere ---------- */
+.sw.dash { background-image: repeating-linear-gradient(90deg, transparent 0 3px, rgba(4,6,11,.85) 3px 5px) !important; }
+.legend .sw[data-team] { width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; }

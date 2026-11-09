@@ -80,7 +80,7 @@ function lineChart(series, { height = 260, yLabel = "", zero = false, step = fal
       else if (step) d += `H${sx(q[0]).toFixed(1)}V${sy(q[1]).toFixed(1)}`;
       else d += `L${sx(q[0]).toFixed(1)},${sy(q[1]).toFixed(1)}`;
     });
-    out += `<path class="${esc(s.cls || "line-x")}" d="${d}"${s.color ? ` stroke="${esc(s.color)}"` : ""}/>`;
+    out += `<path class="${esc(s.cls || "line-x")}" d="${d}"${s.color ? ` stroke="${esc(s.color)}"` : ""}${s.dash ? ` stroke-dasharray="7 5"` : ""}/>`;
   }
   out += `<text class="tick" x="4" y="12">${esc(yLabel)}</text></svg>`;
   return out;
@@ -127,22 +127,21 @@ const views = {
   },
   async standings() {
     const r = await api("standings", { season: state.season });
-    const d = r.data.drivers.map((x) => `<tr class="pos${x.position}"><td class="num">${x.position}</td><td>${esc(x.name)} <span class="sub">${esc(x.code || "")}</span></td><td>${esc(x.team)}</td><td class="num">${x.wins}</td><td class="num">${x.points}</td></tr>`).join("");
-    const c = r.data.constructors.map((x) => `<tr class="pos${x.position}"><td class="num">${x.position}</td><td>${esc(x.team)}</td><td class="num">${x.wins}</td><td class="num">${x.points}</td></tr>`).join("");
-    return [r.meta, `<div class="grid2"><div class="card"><h2>Drivers · after round ${esc(r.data.after_round)}</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Wins</th><th class="num">Pts</th></tr></thead><tbody>${d}</tbody></table></div></div><div class="card"><h2>Constructors</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Wins</th><th class="num">Pts</th></tr></thead><tbody>${c}</tbody></table></div></div></div>`];
+    const d = r.data.drivers.map((x) => `<tr class="pos${x.position}" data-team="${esc(x.team_colour || "")}"><td class="num">${x.position}</td><td class="drv">${plate(x, 24)}<span>${esc(x.name)} <span class="sub">${esc(x.code || "")}</span></span></td><td><span class="teamchip" data-team="${esc(x.team_colour || "")}"></span>${esc(x.team)}</td><td class="num">${x.wins}</td><td class="num">${x.points}</td></tr>`).join("");
+    const c = r.data.constructors.map((x) => `<tr class="pos${x.position}" data-team="${esc(x.team_colour || "")}"><td class="num">${x.position}</td><td><span class="teamchip" data-team="${esc(x.team_colour || "")}"></span>${esc(x.team)}</td><td class="num">${x.wins}</td><td class="num">${x.points}</td></tr>`).join("");
+    return [r.meta, `<div class="grid2"><div class="card"><h2>Drivers · after round ${esc(r.data.after_round)}</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Wins</th><th class="num">Pts</th></tr></thead><tbody>${d}</tbody></table></div></div><div class="card"><h2>Constructors</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Wins</th><th class="num">Pts</th></tr></thead><tbody>${c}</tbody></table></div></div></div>${notes(r.meta)}`, paintTeams];
   },
   async points() {
     const r = await api("points", { season: state.season });
     const d = r.data;
-    const pal = ["#ff2a3d", "#39d5ff", "#ffc24a", "#3ff0a8", "#b98cff", "#ff8a3d", "#f2f5fa", "#5b9bd5", "#ff6fb5", "#9be15d"];
-    const series = d.series.map((s, i) => ({ color: pal[i % pal.length], points: s.points }));
-    const rows = d.table.map((x, i) => `<tr class="pos${x.position}"><td class="num">${x.position}</td><td class="drv"><i class="sw" data-c="${i}"></i>${esc(x.name)} <span class="sub">${esc(x.code || "")}</span></td><td>${esc(x.team)}</td><td class="num">${x.points}</td><td class="num">${x.position === 1 ? "leader" : "-" + x.gap}</td><td>${x.can_still_win ? '<span class="ok">in contention</span>' : '<span class="sub">out of reach</span>'}</td></tr>`).join("");
+    const series = d.series.map((s) => ({ color: s.team_colour || "#8a96ad", dash: s.second_driver, points: s.points }));
+    const rows = d.table.map((x) => `<tr class="pos${x.position}" data-team="${esc(x.team_colour || "")}"><td class="num">${x.position}</td><td class="drv">${plate(x, 22)}<span>${esc(x.name)} <span class="sub">${esc(x.code || "")}</span></span></td><td><span class="teamchip" data-team="${esc(x.team_colour || "")}"></span>${esc(x.team)}</td><td class="num">${x.points}</td><td class="num">${x.position === 1 ? "leader" : "-" + x.gap}</td><td>${x.can_still_win ? '<span class="ok">in contention</span>' : '<span class="sub">out of reach</span>'}</td></tr>`).join("");
     return [r.meta, `<div class="kpis bigkpi"><div class="kpi a"><div class="v">${esc(d.table[0]?.code || "–")} ${esc(d.table[0]?.points ?? "")}</div><div class="l">Championship leader</div></div>
         <div class="kpi"><div class="v">${d.rounds_done}/${d.rounds_total}</div><div class="l">Rounds complete</div></div>
         <div class="kpi b"><div class="v">${d.max_points_left}</div><div class="l">Max points still available</div></div></div>
       <div class="card"><h2>Points progression · top ${d.series.length}</h2>${lineChart(series, { yLabel: "points", yMin: 0 })}
-        <div class="legend">${d.series.map((s, i) => `<span><i class="sw" data-c="${i}"></i>${esc(s.code || s.driver_id)}</span>`).join("")}</div></div>
-      <div class="card"><h2>Title fight</h2>${notes(r.meta)}<div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Pts</th><th class="num">Gap</th><th>Mathematically</th></tr></thead><tbody>${rows}</tbody></table></div></div>`, paintSwatches];
+        <div class="legend">${d.series.map((s) => `<span><i class="sw${s.second_driver ? " dash" : ""}" data-team="${esc(s.team_colour || "")}"></i>${esc(s.code || s.driver_id)}</span>`).join("")}<span class="sub">dashed = second driver of the same team</span></div></div>
+      <div class="card"><h2>Title fight</h2>${notes(r.meta)}<div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Pts</th><th class="num">Gap</th><th>Mathematically</th></tr></thead><tbody>${rows}</tbody></table></div></div>`, paintTeams];
   },
   async live() {
     const sessName = state.simSession || "Qualifying";
@@ -334,7 +333,7 @@ function paintTeams() {
   document.querySelectorAll("[data-team]").forEach((el) => {
     const c = el.dataset.team;
     if (!/^#[0-9A-Fa-f]{6}$/.test(c)) return;
-    if (el.classList.contains("teamchip")) el.style.background = c;
+    if (el.classList.contains("teamchip") || el.classList.contains("sw")) el.style.background = c;
     else if (el.tagName === "TR") el.style.boxShadow = `inset 3px 0 0 ${c}`;
     else el.style.borderLeft = `4px solid ${c}`;
   });
@@ -522,6 +521,51 @@ function tickClocks() {
   $("#clkD").textContent = f("America/New_York") + " " + (Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", timeZoneName: "short" }).formatToParts(now).find((p) => p.type === "timeZoneName")?.value || "ET");
 }
 
+/* ---------- v0.6: countdown to the next session (always the real upcoming weekend, not the selected race) ---------- */
+const LIVE_WINDOW_S = { "Race": 2.5 * 3600, "Sprint": 3600, "Qualifying": 3600, "Sprint Qualifying": 2700 };
+function sessionStart(x) { return x.time ? Date.parse(`${x.date}T${x.time}`) : Date.parse(`${x.date}T00:00:00Z`); }
+async function loadCountdown() {
+  const y = new Date().getUTCFullYear();
+  state.cd = [];
+  for (const season of [y, y + 1]) {
+    try {
+      const r = await api("calendar", { season });
+      for (const race of r.data.races) {
+        const list = race.sessions?.length ? race.sessions : [{ name: "Race", date: race.date, time: race.time }];
+        for (const x of list) state.cd.push({ race, name: x.name, start: sessionStart(x), timed: !!x.time });
+      }
+      if (state.cd.some((x) => x.start > Date.now())) break;
+    } catch { /* next season may not be published yet */ }
+  }
+  state.cd.sort((a, b) => a.start - b.start);
+  tickCountdown();
+}
+function dhms(ms) {
+  const t = Math.max(0, Math.floor(ms / 1000)), d = Math.floor(t / 86400), h = Math.floor(t / 3600) % 24, m = Math.floor(t / 60) % 60, s = t % 60;
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d ? `${d}<small>D</small>` : ""}${p(h)}<small>H</small>${p(m)}<small>M</small>${p(s)}<small>S</small>`;
+}
+function tickCountdown() {
+  if (!state.cd) return;
+  const now = Date.now(), bar = $("#countdown");
+  const live = state.cd.find((x) => x.timed && x.start <= now && now < x.start + (LIVE_WINDOW_S[x.name] || 3600) * 1000);
+  const next = state.cd.find((x) => x.start > now);
+  const cur = live || next;
+  if (!cur) { $("#cd-name").textContent = "No upcoming sessions published yet"; return; }
+  bar.classList.toggle("live", !!live);
+  $("#cd-tag").textContent = live ? "LIVE" : "NEXT";
+  if (state.cdKey !== cur.race.season + "/" + cur.race.round + cur.name) {
+    state.cdKey = cur.race.season + "/" + cur.race.round + cur.name;
+    $("#cd-flag").innerHTML = flagSvg(cur.race.country, 26);
+    $("#cd-name").textContent = cur.race.name;
+    const when = new Date(cur.start);
+    $("#cd-sess").textContent = `${cur.name.toUpperCase()} · ${when.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" })}${cur.timed ? "" : " (time TBC)"}`;
+    const race = state.cd.find((x) => x.race === cur.race && x.name === "Race");
+    $("#cd-race").textContent = race && cur.name !== "Race" ? `LIGHTS OUT ${new Date(race.start).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : "";
+  }
+  $("#cd-time").innerHTML = live ? "SESSION LIVE" : dhms(cur.start - now);
+}
+
 async function loadRounds() {
   const sel = $("#round");
   try {
@@ -537,7 +581,9 @@ async function loadRounds() {
 async function init() {
   $("#season").value = state.season;
   tickClocks();
-  setInterval(tickClocks, 1000);
+  setInterval(() => { tickClocks(); tickCountdown(); }, 1000);
+  loadCountdown();
+  setInterval(loadCountdown, 6 * 3600 * 1000);
   try {
     const h = await api("health");
     if (h.mode === "fixture") $("#fixture-banner").classList.remove("hidden");

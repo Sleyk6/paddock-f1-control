@@ -31,6 +31,50 @@ def downsample(rows: list, limit: int = 400) -> list:
     return [rows[int(i * step)] for i in range(limit)]
 
 
+_SESSION_KEYS = (("FirstPractice", "Practice 1"), ("SecondPractice", "Practice 2"), ("ThirdPractice", "Practice 3"),
+                 ("SprintQualifying", "Sprint Qualifying"), ("SprintShootout", "Sprint Qualifying"),
+                 ("Sprint", "Sprint"), ("Qualifying", "Qualifying"))
+
+
+def _sessions(r: dict) -> list:
+    """Weekend sessions with UTC start times, in time order (Race last). Missing times are skipped."""
+    out = []
+    for key, name in _SESSION_KEYS:
+        s = r.get(key)
+        if isinstance(s, dict) and s.get("date"):
+            out.append({"name": name, "date": s["date"], "time": s.get("time")})
+    if r.get("date"):
+        out.append({"name": "Race", "date": r["date"], "time": r.get("time")})
+    return sorted(out, key=lambda x: (x["date"], x["time"] or ""))
+
+
+# ---- Team identity -----------------------------------------------------------
+# One canonical key per team, so names from Jolpica ("RB F1 Team", "Sauber") and OpenF1
+# ("Racing Bulls", "Kick Sauber") line up. Order matters: Racing Bulls before Red Bull.
+_TEAM_RULES = (("racing bulls", "racing_bulls"), ("visa", "racing_bulls"), ("rb f1", "racing_bulls"),
+               ("alphatauri", "racing_bulls"), ("toro rosso", "racing_bulls"), ("red bull", "red_bull"),
+               ("mclaren", "mclaren"), ("ferrari", "ferrari"), ("mercedes", "mercedes"),
+               ("aston", "aston_martin"), ("alpine", "alpine"), ("williams", "williams"), ("haas", "haas"),
+               ("audi", "audi"), ("sauber", "sauber"), ("kick", "sauber"), ("cadillac", "cadillac"))
+
+# Used only when OpenF1 has no session for the season yet (or is unreachable).
+# Approximate public team colours; OpenF1's official values replace them whenever available.
+FALLBACK_TEAM_COLOURS = {"mclaren": "#FF8000", "ferrari": "#E80020", "mercedes": "#27F4D2", "red_bull": "#3671C6",
+                         "racing_bulls": "#6692FF", "aston_martin": "#229971", "alpine": "#0093CC",
+                         "williams": "#64C4FF", "haas": "#B6BABD", "sauber": "#52E252", "audi": "#BB0A30",
+                         "cadillac": "#E6E6E6"}
+
+
+def team_key(name: str | None) -> str | None:
+    n = (name or "").lower().replace("_", " ")
+    if n.strip() == "rb":
+        return "racing_bulls"
+    for needle, key in _TEAM_RULES:
+        if needle in n:
+            return key
+    return None
+
+
 class F1Service:
     def __init__(self, jolpica, openf1, current_year: int | None = None, weather=None, today: str | None = None):
         self.jolpica = jolpica
@@ -85,7 +129,7 @@ class F1Service:
                   "country": r["Circuit"]["Location"].get("country"),
                   "date": r["date"], "time": r.get("time"), "circuit_id": r["Circuit"].get("circuitId"),
                   "lat": _float(r["Circuit"]["Location"].get("lat")), "lon": _float(r["Circuit"]["Location"].get("long")),
-                  "sprint": bool(r.get("Sprint"))}
+                  "sprint": bool(r.get("Sprint")), "sessions": _sessions(r)}
                  for r in env["data"]["MRData"]["RaceTable"]["Races"]]
         return self._wrap(season, [env], {"season": season, "races": races})
 
@@ -104,8 +148,48 @@ class F1Service:
                   "points": float(s["points"]), "wins": int(s["wins"])}
                  for s in (c_lists[0]["ConstructorStandings"] if c_lists else [])]
         after = d_lists[0].get("round") if d_lists else None
-        return self._wrap(season, [d_env, c_env],
-                          {"season": season, "after_round": after, "drivers": drivers, "constructors": teams})
+        for s, d in zip((d_lists[0]["DriverStandings"] if d_lists else []), drivers):
+            d["number"] = s["Driver"].get("permanentNumber")
+        ident, envs, notes = self.team_identity(season)
+        for d in drivers:
+            d["team_key"] = team_key(d["team"])
+            d["team_colour"] = ident["colours"].get(d["team_key"])
+            live = ident["by_number"].get(str(d.get("number")))
+            if live and d["team_key"] and live["team_key"] and live["team_key"] != d["team_key"]:
+                notes.append(f'Check: {d["name"]} is with {d["team"]} in the results data but {live["team_name"]} '
+                             f'in the latest OpenF1 session.')
+        for t in teams:
+            t["team_key"] = team_key(t["team"])
+            t["team_colour"] = ident["colours"].get(t["team_key"])
+        return self._wrap(season, [d_env, c_env] + envs,
+                          {"season": season, "after_round": after, "drivers": drivers, "constructors": teams}, notes)
+
+    def team_identity(self, season: int):
+        """Official team colours + driver-number -> team from the season's latest OpenF1 session,
+        falling back to FALLBACK_TEAM_COLOURS. Returns (identity, envelopes, notes)."""
+        colours, by_number, envs, notes = dict(FALLBACK_TEAM_COLOURS), {}, [], []
+        if season < OPENF1_FIRST_SEASON:
+            return {"colours": colours, "by_number": by_number, "source": "fallback"}, envs, notes
+        try:
+            s_env = self.openf1.get("/sessions", [("year", "=", str(season))], ttl=self._ttl(season))
+            today = self._today()
+            past = [x for x in s_env["data"] if str(x.get("date_start", ""))[:10] <= today]
+            if past:
+                latest = max(past, key=lambda x: str(x.get("date_start")))
+                d_env = self.openf1.get("/drivers", [("session_key", "=", str(latest["session_key"]))],
+                                        ttl=self._ttl(season))
+                envs += [s_env, d_env]
+                for d in d_env["data"]:
+                    k = team_key(d.get("team_name"))
+                    c = str(d.get("team_colour") or "")
+                    if k and re.fullmatch(r"[0-9A-Fa-f]{6}", c):
+                        colours[k] = "#" + c.upper()
+                    by_number[str(d.get("driver_number"))] = {"team_key": k, "team_name": d.get("team_name")}
+                return {"colours": colours, "by_number": by_number, "source": "openf1"}, envs, notes
+        except SourceError:
+            pass
+        notes.append("Team colours: approximate built-in values (OpenF1 not available for this season yet).")
+        return {"colours": colours, "by_number": by_number, "source": "fallback"}, envs, notes
 
     def _race_results(self, season: int, rnd: int):
         env = self._jolpica(season, f"/{season}/{rnd}/results.json")
@@ -139,8 +223,9 @@ class F1Service:
                                if re.fullmatch(r"[0-9A-Fa-f]{6}", str(d.get("team_colour") or ""))}
             except SourceError:
                 pass
+        ident = self.team_identity(season)[0]["colours"]
         for row in rows:
-            row["team_colour"] = colours.get(str(row["number"]))
+            row["team_colour"] = colours.get(str(row["number"])) or ident.get(team_key(row["team"]))
         return self._wrap(season, envs, {"season": season, "round": rnd, "race": race["raceName"],
                                           "date": race["date"], "circuit": race["Circuit"]["circuitName"],
                                           "results": rows})
@@ -306,7 +391,20 @@ class F1Service:
                  + (f" + {sprints_left} sprints x 8" if sprints_left else "") + "). Ignores tie-breaks."]
         return self._wrap(season, envs + [], {"season": season, "rounds_done": done, "rounds_total": len(cal),
                                               "max_points_left": max_left, "table": table,
-                                              "series": [series[i] for i in leaders if i in series]}, notes)
+                                              "series": self._colour_series([series[i] for i in leaders if i in series],
+                                                                            st["data"]["drivers"])},
+                          notes + st["meta"]["notes"])
+
+    @staticmethod
+    def _colour_series(series: list, drivers: list) -> list:
+        by_id = {d["driver_id"]: d for d in drivers}
+        seen = set()
+        for s in series:
+            d = by_id.get(s["driver_id"], {})
+            s["team"], s["team_colour"] = d.get("team"), d.get("team_colour")
+            s["second_driver"] = d.get("team_key") in seen   # teammate -> dashed line
+            seen.add(d.get("team_key"))
+        return series
 
     # ---- Race weekend: practice bests, qualifying, weather ----------------------
     def _today(self) -> str:
