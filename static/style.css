@@ -280,3 +280,5 @@ svg.tyre .ring.c-INTERMEDIATE { stroke: var(--inter); } svg.tyre .ring.c-WET { s
 /* ---------- v0.6.1: team colours everywhere ---------- */
 .sw.dash { background-image: repeating-linear-gradient(90deg, transparent 0 3px, rgba(4,6,11,.85) 3px 5px) !important; }
 .legend .sw[data-team] { width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; }
+.dcard > div:last-child { min-width: 0; }
+.dname { font-size: clamp(15px, 1.6vw, 22px); overflow-wrap: anywhere; }

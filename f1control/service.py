@@ -81,7 +81,13 @@ class F1Service:
         self.openf1 = openf1
         self.weather_src = weather  # Open-Meteo (forecast); optional
         self.today = today
-        self.current_year = current_year or datetime.now(timezone.utc).year
+        self._pinned_year = current_year
+
+    @property
+    def current_year(self) -> int:
+        """Pinned in tests; otherwise follows the clock, so a server left running
+        over New Year starts treating the new season as current without a restart."""
+        return self._pinned_year or datetime.now(timezone.utc).year
 
     # ---- helpers -------------------------------------------------------
     def _ttl(self, season: int):
@@ -151,6 +157,17 @@ class F1Service:
         for s, d in zip((d_lists[0]["DriverStandings"] if d_lists else []), drivers):
             d["number"] = s["Driver"].get("permanentNumber")
         ident, envs, notes = self.team_identity(season)
+        # A driver's current team = the team in the latest race they started. The standings'
+        # constructor list is not guaranteed to be in date order (a mid-season swap can show the old team).
+        if after:
+            try:
+                last_race, last_env = self._race_results(season, int(after))
+                envs.append(last_env)
+                current = {r["Driver"]["driverId"]: r["Constructor"]["name"] for r in last_race["Results"]}
+                for d in drivers:
+                    d["team"] = current.get(d["driver_id"], d["team"])
+            except SourceError:
+                pass
         for d in drivers:
             d["team_key"] = team_key(d["team"])
             d["team_colour"] = ident["colours"].get(d["team_key"])

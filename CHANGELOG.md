@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.3 (2026-11-09)
+- **Stays current by itself.** The page opens on the most recent race that has happened, instead of round 1.
+- Every hour (and when you come back to the tab after an hour away) it re-pulls the calendar, countdown and the page you are on, and moves to the newest race if one has finished. The footer shows "updated <day> <time>".
+- Picking a race yourself turns the auto-jump off until you reload, so it never yanks you away mid-analysis; a running Live drill replay is never interrupted.
+- The server now follows the clock for "current season", so leaving it running over New Year needs no restart.
+
+## 0.6.2 (2026-11-09)
+- Drivers who switched teams mid-season are now shown with the team from their latest race (standings data alone could list the old team).
+- Status chips grouped by source, with a request count and the newest fetch time.
+- Long driver names no longer clip on the podium cards.
+
 ## 0.6.1 (2026-11-09)
 - Team colours everywhere (standings, constructors, points, results): official OpenF1 colours for the season's latest session, built-in fallback otherwise.
 - Points chart: teammates share a colour, second driver dashed.

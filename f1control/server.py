@@ -22,7 +22,7 @@ from .sources import (JOLPICA_BASE, OPENF1_BASE, OPENMETEO_BASE, DiskCache, Fixt
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(ROOT, "static")
-VERSION = "0.6.1"
+VERSION = "0.6.3"
 log = logging.getLogger("f1control")
 
 

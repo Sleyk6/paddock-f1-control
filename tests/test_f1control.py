@@ -379,3 +379,10 @@ class TeamIdentityTest(unittest.TestCase):
         self.assertTrue(all("team_colour" in d and "team_key" in d for d in st["drivers"]))
         pts = svc.points_tracker(2024)["data"]
         self.assertTrue(all("team_colour" in s and "second_driver" in s for s in pts["series"]))
+
+
+class CurrentYearTest(unittest.TestCase):
+    def test_follows_clock_unless_pinned(self):
+        from datetime import datetime, timezone
+        self.assertEqual(F1Service(None, None, current_year=2024).current_year, 2024)
+        self.assertEqual(F1Service(None, None).current_year, datetime.now(timezone.utc).year)

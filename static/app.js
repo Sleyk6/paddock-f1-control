@@ -2,7 +2,7 @@
 /* PADDOCK F1 CONTROL front end. No external libraries; charts are plain SVG. */
 
 const $ = (sel) => document.querySelector(sel);
-const state = { season: new Date().getUTCFullYear(), round: 1, tab: "calendar", results: null, calendar: null };
+const state = { season: new Date().getUTCFullYear(), round: null, autoRound: true, tab: "calendar", results: null, calendar: null, refreshedAt: 0 };
 
 function esc(v) {
   return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -32,14 +32,18 @@ function renderStatus(meta) {
   if (!meta) { el.innerHTML = ""; return; }
   const kindText = { historical: "HISTORICAL", recent: "RECENT · may change", fixture: "TEST FIXTURE · synthetic" }[meta.data_kind] || meta.data_kind;
   const chips = [`<span class="badge kind-${esc(meta.data_kind)}">${esc(kindText)}</span>`];
-  const seen = new Set();
+  // One chip per source + cache state: request count and the newest fetch time.
+  const groups = new Map();
   for (const s of meta.sources || []) {
-    const key = `${s.source}|${s.cache}|${s.fetched_at}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const cache = { hit: "cached", miss: "fresh", stale: "STALE cache", fixture: "fixture" }[s.cache] || s.cache;
-    chips.push(`<span class="badge cache-${esc(s.cache)}">${esc(s.source)} · ${esc(cache)} · fetched ${esc(s.fetched_at)}</span>`);
+    const key = `${s.source}|${s.cache}`;
+    const g = groups.get(key) || { s, n: 0, latest: "" };
+    g.n += 1; if ((s.fetched_at || "") > g.latest) g.latest = s.fetched_at || "";
+    groups.set(key, g);
     if (s.warning) chips.push(`<span class="badge cache-stale">${esc(s.warning)}</span>`);
+  }
+  for (const { s, n, latest } of groups.values()) {
+    const cache = { hit: "cached", miss: "fresh", stale: "STALE cache", fixture: "fixture" }[s.cache] || s.cache;
+    chips.push(`<span class="badge cache-${esc(s.cache)}">${esc(s.source)} · ${esc(cache)}${n > 1 ? ` ×${n}` : ""} · fetched ${esc(latest)}</span>`);
   }
   if (meta.server_ms != null) chips.push(`<span class="badge">server ${esc(meta.server_ms)} ms</span>`);
   el.innerHTML = chips.join("");
@@ -566,13 +570,40 @@ function tickCountdown() {
   $("#cd-time").innerHTML = live ? "SESSION LIVE" : dhms(cur.start - now);
 }
 
+/* ---------- v0.6.3: daily freshness ----------
+   On open, and again every hour, the page jumps to the most recent race that has
+   happened (unless you picked a race yourself) and re-pulls the data. The server
+   caches current-season data for 1 hour, so this never hammers the APIs. */
+const REFRESH_MS = 60 * 60 * 1000;
+function latestRound(races) {
+  const today = new Date().toISOString().slice(0, 10);
+  const done = races.filter((x) => x.date <= today);
+  return (done.length ? done[done.length - 1] : races[0])?.round || 1;
+}
+function stampRefresh() {
+  state.refreshedAt = Date.now();
+  $("#refreshed").textContent = ` · updated ${new Date().toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
+}
+async function refreshAll(reason) {
+  if (state.simTimer) return; // don't interrupt a running replay; try again next time
+  if (state.autoRound && state.season !== new Date().getUTCFullYear()) state.season = new Date().getUTCFullYear(), $("#season").value = state.season;
+  await loadCountdown();
+  await loadRounds();
+  state.results = null;
+  await show();
+  stampRefresh();
+  console.debug("PADDOCK refresh:", reason);
+}
+
 async function loadRounds() {
   const sel = $("#round");
   try {
     const r = await api("calendar", { season: state.season });
     state.calendar = r.data;
     sel.innerHTML = r.data.races.map((x) => `<option value="${x.round}" ${x.round === state.round ? "selected" : ""}>${x.round}. ${esc(x.name)}</option>`).join("");
+    if (state.autoRound) state.round = latestRound(r.data.races);
     if (!r.data.races.some((x) => x.round === state.round)) state.round = r.data.races[0]?.round || 1;
+    sel.value = String(state.round);
   } catch {
     sel.innerHTML = `<option value="${state.round}">Round ${state.round}</option>`;
   }
@@ -583,7 +614,10 @@ async function init() {
   tickClocks();
   setInterval(() => { tickClocks(); tickCountdown(); }, 1000);
   loadCountdown();
-  setInterval(loadCountdown, 6 * 3600 * 1000);
+  setInterval(() => refreshAll("hourly"), REFRESH_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && Date.now() - state.refreshedAt > REFRESH_MS) refreshAll("tab returned");
+  });
   try {
     const h = await api("health");
     if (h.mode === "fixture") $("#fixture-banner").classList.remove("hidden");
@@ -593,11 +627,12 @@ async function init() {
     document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("active", x === b));
     state.tab = b.dataset.tab; show();
   }));
-  $("#season").addEventListener("change", async (e) => { state.season = +e.target.value; state.results = null; await loadRounds(); });
-  $("#round").addEventListener("change", (e) => { state.round = +e.target.value; state.results = null; state.cmpA = state.cmpB = state.telDriver = null; setHero(); });
+  $("#season").addEventListener("change", async (e) => { state.season = +e.target.value; state.autoRound = state.season === new Date().getUTCFullYear(); state.results = null; await loadRounds(); });
+  $("#round").addEventListener("change", (e) => { state.round = +e.target.value; state.autoRound = false; state.results = null; state.cmpA = state.cmpB = state.telDriver = null; setHero(); });
   $("#controls").addEventListener("submit", (e) => { e.preventDefault(); state.season = +$("#season").value; state.round = +$("#round").value; state.results = null; show(); });
   await loadRounds();
-  show();
+  await show();
+  stampRefresh();
 }
 
 init();
