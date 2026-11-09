@@ -142,9 +142,28 @@ const views = {
   async results() {
     const r = await ensureResults();
     const res = r.data.results;
-    const podium = res.slice(0, 3).map((x, i) => `<div class="dcard p${i + 1}">${plate(x, 64)}<div><div class="dpos">P${esc(x.position)}</div><div class="dname">${esc(x.name)}</div><div class="sub">${esc(x.team)} · ${esc(x.time || x.status)}</div></div></div>`).join("");
-    const rows = res.map((x) => `<tr class="pos${esc(x.position)}"><td class="num">${esc(x.position)}</td><td class="drv">${plate(x, 26)}<span>${esc(x.name)}</span></td><td>${esc(x.team)}</td><td class="num">${x.grid}</td><td class="num">${x.laps}</td><td>${esc(x.time || x.status)}</td><td>${esc(x.fastest_lap || "–")}</td><td class="num">${x.points}</td></tr>`).join("");
-    return [r.meta, `<div class="podium">${podium}</div><div class="card"><h2>Classification · ${esc(r.data.circuit)} · ${esc(r.data.date)}</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Grid</th><th class="num">Laps</th><th>Time / status</th><th>Fastest lap</th><th class="num">Pts</th></tr></thead><tbody>${rows}</tbody></table></div></div>`];
+    let stints = {};
+    try {
+      const st = await api("strategy", { season: state.season, round: state.round });
+      for (const x of st.data.stints) (stints[x.code] = stints[x.code] || []).push(x);
+    } catch { stints = {}; }
+    const maxLap = Math.max(1, ...res.map((x) => x.laps));
+    const tyres = (code) => {
+      const list = (stints[code] || []).sort((a, b) => a.stint - b.stint);
+      if (!list.length) return '<span class="sub">–</span>';
+      return `<svg class="minityres" viewBox="0 0 100 10" role="img" aria-label="${esc(list.map((s) => s.compound).join(", "))}">${list.map((s) => `<rect class="c-${esc(String(s.compound || "UNKNOWN").toUpperCase())}" x="${(((s.lap_start || 1) - 1) / maxLap) * 100}" y="1" width="${Math.max(1.5, (((s.lap_end || s.lap_start || 1) - (s.lap_start || 1) + 1) / maxLap) * 100 - 1)}" height="8" rx="1.5"><title>${esc(s.compound)} L${esc(s.lap_start)}–${esc(s.lap_end)}</title></rect>`).join("")}</svg>`;
+    };
+    const moved = (x) => {
+      const fin = parseInt(x.position, 10);
+      if (!x.grid || isNaN(fin)) return '<span class="sub">pit lane</span>';
+      const d = x.grid - fin;
+      return d > 0 ? `<span class="up">▲${d}</span>` : d < 0 ? `<span class="down">▼${-d}</span>` : '<span class="sub">=</span>';
+    };
+    const fl = (x) => x.fastest_lap_rank === "1" ? `<span class="purple" title="Fastest lap">${esc(x.fastest_lap)}</span>` : esc(x.fastest_lap || "–");
+    const podium = res.slice(0, 3).map((x, i) => `<div class="dcard p${i + 1}" data-team="${esc(x.team_colour || "")}">${plate(x, 64)}<div><div class="dpos">P${esc(x.position)} ${flagForNationality(x.nationality, 22)}</div><div class="dname">${esc(x.name)}</div><div class="sub">${esc(x.team)} · ${esc(x.time || x.status)}</div>${tyres(x.code)}</div></div>`).join("");
+    const rows = res.map((x) => `<tr class="pos${esc(x.position)}" data-team="${esc(x.team_colour || "")}"><td class="num">${esc(x.position)}</td><td class="drv">${plate(x, 26)}${flagForNationality(x.nationality, 20)}<span>${esc(x.name)}</span></td><td><span class="teamchip" data-team="${esc(x.team_colour || "")}"></span>${esc(x.team)}</td><td class="num">${x.grid || "PL"}</td><td class="num">${moved(x)}</td><td>${tyres(x.code)}</td><td>${esc(x.time || x.status)}</td><td>${fl(x)}</td><td class="num">${x.points}</td></tr>`).join("");
+    return [r.meta, `<div class="podium">${podium}</div><div class="card"><h2>Classification · ${esc(r.data.circuit)} · ${esc(r.data.date)}</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Grid</th><th class="num">+/-</th><th>Tyres</th><th>Time / status</th><th>Fastest lap</th><th class="num">Pts</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="legend"><span><i class="purple">■</i> fastest lap</span><span>▲▼ places gained/lost from grid</span><span>Tyres: soft · medium · hard · inter · wet</span></div></div>`, paintTeams];
   },
   async compare() {
     const res = await ensureResults();
@@ -244,6 +263,16 @@ function bindPlan() {
     state.alloc = { soft: $("#aS").value || 0, medium: $("#aM").value || 0, hard: $("#aH").value || 0, pit_loss: $("#aP").value };
     show();
   };
+}
+
+function paintTeams() {
+  document.querySelectorAll("[data-team]").forEach((el) => {
+    const c = el.dataset.team;
+    if (!/^#[0-9A-Fa-f]{6}$/.test(c)) return;
+    if (el.classList.contains("teamchip")) el.style.background = c;
+    else if (el.tagName === "TR") el.style.boxShadow = `inset 3px 0 0 ${c}`;
+    else el.style.borderLeft = `4px solid ${c}`;
+  });
 }
 
 function paintSwatches() {

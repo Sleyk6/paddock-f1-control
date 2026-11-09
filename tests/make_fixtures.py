@@ -26,8 +26,12 @@ def mr(total, **table):
     return {"MRData": {"limit": "100", "offset": "0", "total": str(total), **table}}
 
 
+NATS = ["British", "Dutch", "Monegasque", "Spanish", "Australian", "Japanese"]
+
+
 def driver(d):
-    return {"driverId": d[0], "code": d[1], "permanentNumber": d[2], "givenName": d[3], "familyName": d[4]}
+    return {"driverId": d[0], "code": d[1], "permanentNumber": d[2], "givenName": d[3], "familyName": d[4],
+            "nationality": NATS[int(d[2]) - 1]}
 
 
 def fmt(t):
@@ -70,7 +74,7 @@ for pos, did in enumerate(order, 1):
                     "Driver": driver(d), "Constructor": {"constructorId": d[5].lower().replace(" ", "_"), "name": d[5]},
                     "grid": str(DRIVERS.index(d) + 1), "laps": str(LAPS), "status": "Finished",
                     "Time": {"millis": str(round(total[did] * 1000)), "time": fmt(total[did]) if pos == 1 else f"+{total[did] - total[order[0]]:.3f}"},
-                    "FastestLap": {"rank": "0", "lap": str(laps[did].index(best) + 1), "Time": {"time": fmt(best)}}})
+                    "FastestLap": {"rank": "1" if did == min(laps, key=lambda k: min(laps[k])) else "2", "lap": str(laps[did].index(best) + 1), "Time": {"time": fmt(best)}}})
 
 jolpica = {
     f"/{SEASON}.json": mr(3, RaceTable={"season": SEASON, "Races": races}),

@@ -22,7 +22,7 @@ from .sources import (JOLPICA_BASE, OPENF1_BASE, DiskCache, FixtureSource, HttpS
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(ROOT, "static")
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 log = logging.getLogger("f1control")
 
 

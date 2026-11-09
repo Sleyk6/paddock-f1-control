@@ -123,7 +123,7 @@ class F1Service:
                          "laps": int(r.get("laps") or 0), "status": r.get("status"),
                          "time": (r.get("Time") or {}).get("time"), "points": float(r.get("points") or 0),
                          "fastest_lap": (fl.get("Time") or {}).get("time"),
-                         "fastest_lap_rank": fl.get("rank")})
+                         "fastest_lap_rank": fl.get("rank"), "nationality": r["Driver"].get("nationality")})
         envs, colours = [env], {}
         if season >= OPENF1_FIRST_SEASON:  # optional: team colours for driver cards
             try:

@@ -210,3 +210,13 @@ svg.flag { flex: none; border: 1px solid rgba(255, 255, 255, .25); box-shadow: 0
 .ok { color: var(--ok); }
 .sw[data-c] { width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; }
 svg .line-x { fill: none; stroke-width: 2; }
+
+/* ---------- v0.2.1: results detail ---------- */
+.up { color: var(--ok); font: 700 12px var(--mono); } .down { color: var(--red); font: 700 12px var(--mono); }
+.purple { color: #b26bff; font-weight: 700; text-shadow: 0 0 10px rgba(178, 107, 255, .5); }
+i.purple { font-style: normal; }
+svg.minityres { width: 120px; height: 12px; display: block; }
+.dcard svg.minityres { margin-top: 6px; width: 150px; }
+.teamchip { display: inline-block; width: 4px; height: 14px; margin-right: 8px; vertical-align: -2px; background: var(--dim); }
+.dpos svg.flag { vertical-align: -3px; margin-left: 6px; }
+td.drv svg.flag { margin-left: -2px; }

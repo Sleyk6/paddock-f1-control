@@ -45,9 +45,29 @@
     FRANCE: V("#002395", "#fff", "#ED2939"),
     GERMANY: H("#000", "#DD0000", "#FFCE00"),
     RUSSIA: H("#fff", "#0039A6", "#D52B1E"),
+    THAILAND: `<rect width="30" height="20" fill="#A51931"/><rect y="3.33" width="30" height="13.34" fill="#F4F5F8"/><rect y="6.67" width="30" height="6.66" fill="#2D2A4A"/>`,
+    DENMARK: `<rect width="30" height="20" fill="#C8102E"/><rect x="9" width="3" height="20" fill="#fff"/><rect y="8.5" width="30" height="3" fill="#fff"/>`,
+    FINLAND: `<rect width="30" height="20" fill="#fff"/><rect x="8.5" width="4.5" height="20" fill="#002F6C"/><rect y="7.75" width="30" height="4.5" fill="#002F6C"/>`,
+    SWEDEN: `<rect width="30" height="20" fill="#006AA7"/><rect x="9" width="3.5" height="20" fill="#FECC02"/><rect y="8.25" width="30" height="3.5" fill="#FECC02"/>`,
+    NORWAY: `<rect width="30" height="20" fill="#BA0C2F"/><rect x="8" width="5" height="20" fill="#fff"/><rect y="7.5" width="30" height="5" fill="#fff"/><rect x="9.25" width="2.5" height="20" fill="#00205B"/><rect y="8.75" width="30" height="2.5" fill="#00205B"/>`,
+    SWITZERLAND: `<rect width="30" height="20" fill="#DA291C"/><rect x="13.5" y="4" width="3" height="12" fill="#fff"/><rect x="9" y="8.5" width="12" height="3" fill="#fff"/>`,
+    POLAND: H("#fff", "#DC143C"),
+    "NEW ZEALAND": `<rect width="30" height="20" fill="#012169"/>` + union(15, 10) + star(22, 5, 1.3, "#C8102E") + star(25, 9, 1.3, "#C8102E") + star(19.5, 10, 1.1, "#C8102E") + star(22, 15.5, 1.4, "#C8102E"),
+    ARGENTINA: H("#74ACDF", "#fff", "#74ACDF") + `<circle cx="15" cy="10" r="2" fill="#F6B40E"/>`,
+    INDONESIA: H("#CE1126", "#fff"),
+    INDIA: H("#FF9933", "#fff", "#138808") + `<circle cx="15" cy="10" r="2.2" fill="none" stroke="#000080" stroke-width=".6"/>`,
+    IRELAND: V("#169B62", "#fff", "#FF883E"),
+    "SOUTH AFRICA": `<rect width="30" height="20" fill="#fff"/><rect width="30" height="7" fill="#E03C31"/><rect y="13" width="30" height="7" fill="#001489"/><polygon points="0,0 12,10 0,20" fill="#007749"/><polygon points="0,3 8,10 0,17" fill="#000"/>`,
     TURKEY: `<rect width="30" height="20" fill="#E30A17"/><circle cx="11" cy="10" r="5" fill="#fff"/><circle cx="12.3" cy="10" r="4" fill="#E30A17"/>` + star(17, 10, 2, "#fff"),
   };
   const ALIAS = { "UNITED STATES": "USA", "UNITED KINGDOM": "UK", "GREAT BRITAIN": "UK", "UNITED ARAB EMIRATES": "UAE", "KOREA": "KOREA" };
+  const DEMONYM = { BRITISH: "UK", ENGLISH: "UK", SCOTTISH: "UK", WELSH: "UK", DUTCH: "NETHERLANDS", MONEGASQUE: "MONACO",
+    SPANISH: "SPAIN", MEXICAN: "MEXICO", AUSTRALIAN: "AUSTRALIA", CANADIAN: "CANADA", FRENCH: "FRANCE", GERMAN: "GERMANY",
+    THAI: "THAILAND", JAPANESE: "JAPAN", CHINESE: "CHINA", DANISH: "DENMARK", FINNISH: "FINLAND", "NEW ZEALANDER": "NEW ZEALAND",
+    AMERICAN: "USA", ITALIAN: "ITALY", ARGENTINE: "ARGENTINA", ARGENTINIAN: "ARGENTINA", BRAZILIAN: "BRAZIL", SWEDISH: "SWEDEN",
+    NORWEGIAN: "NORWAY", SWISS: "SWITZERLAND", POLISH: "POLAND", AUSTRIAN: "AUSTRIA", BELGIAN: "BELGIUM", RUSSIAN: "RUSSIA",
+    INDONESIAN: "INDONESIA", INDIAN: "INDIA", IRISH: "IRELAND", "SOUTH AFRICAN": "SOUTH AFRICA", HUNGARIAN: "HUNGARY", PORTUGUESE: "PORTUGAL" };
+  window.flagForNationality = (nat, size) => window.flagSvg(DEMONYM[String(nat || "").toUpperCase()] || nat, size);
   window.flagSvg = function (country, size = 30) {
     const key = String(country || "").toUpperCase().trim();
     const k = ALIAS[key] || key;

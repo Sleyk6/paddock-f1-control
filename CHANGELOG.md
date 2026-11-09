@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.1 (2026-11-09)
+- Results detail: driver nationality flags, places gained/lost from grid, purple fastest lap, per-driver tyre stint strip, team-colour row accents and chips. More simplified flags (Thailand, Denmark, Finland, New Zealand, Argentina and others). No team logos or driver photos (trademarks / real-person images).
+
 ## 0.2.0 (2026-11-09)
 - **Cinematic HUD redesign:** glass panels, glow, scanlines, a one-time intro animation (off for reduced motion), Bahnschrift display font.
 - **Strategy Planner:** fits tyre wear and compound pace from the race's real laps (with a driver-pace correction), simulates every legal 1- and 2-stop plan for your tyre allocation, ranks them, and checks the model against the winner's real race time.
