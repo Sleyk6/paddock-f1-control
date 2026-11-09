@@ -62,10 +62,23 @@ class SourceTests(unittest.TestCase):
 
     def test_rate_limit_error_is_explained(self):
         err = urllib.error.HTTPError("u", 429, "Too Many", {}, None)
-        src = HttpSource("Test", "https://example.invalid", self.cache, 0, fetch=FakeFetch(error=err))
+        src = HttpSource("Test", "https://example.invalid", self.cache, 0, fetch=FakeFetch(error=err), sleep=lambda s: None)
         with self.assertRaises(SourceError) as ctx:
             src.get("/x.json")
         self.assertIn("rate limit", ctx.exception.message)
+
+    def test_rate_limit_is_retried_then_succeeds(self):
+        calls = {"n": 0}
+
+        def flaky(url, timeout):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise urllib.error.HTTPError(url, 429, "Too Many", {"Retry-After": "1"}, None)
+            return b'{"ok": 2}'
+        waits = []
+        src = HttpSource("Test", "https://example.invalid", self.cache, 0, fetch=flaky, sleep=waits.append)
+        self.assertEqual(src.get("/r.json")["data"], {"ok": 2})
+        self.assertEqual(waits, [1.0])
 
     def test_outage_serves_stale_cache_with_warning(self):
         good = HttpSource("Test", "https://example.invalid", self.cache, 0, fetch=FakeFetch({"v": 1}))

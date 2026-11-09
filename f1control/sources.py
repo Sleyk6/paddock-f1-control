@@ -105,13 +105,16 @@ class HttpSource:
     """A cached, rate-limited JSON API."""
 
     def __init__(self, name: str, base: str, cache: DiskCache, min_interval: float,
-                 fetch: Callable[[str, float], bytes] = default_fetch, timeout: float = 20.0):
+                 fetch: Callable[[str, float], bytes] = default_fetch, timeout: float = 20.0,
+                 retries: int = 2, sleep: Callable[[float], None] = time.sleep):
         self.name = name
         self.base = base
         self.cache = cache
         self.limiter = RateLimiter(min_interval)
         self.fetch = fetch
         self.timeout = timeout
+        self.retries = retries
+        self.sleep = sleep
         self.stats = {"requests": 0, "cache_hits": 0, "errors": 0}
 
     def get(self, path: str, params: Iterable[Param] | None = None, ttl: float | None = 3600) -> dict:
@@ -121,11 +124,22 @@ class HttpSource:
             self.stats["cache_hits"] += 1
             return {"source": self.name, "url": url, "fetched_at": entry["fetched_at"],
                     "cache": "hit", "data": entry["payload"]}
-        self.limiter.wait()
-        self.stats["requests"] += 1
         try:
-            raw = self.fetch(url, self.timeout)
-            payload = json.loads(raw.decode("utf-8"))
+            payload = None
+            for attempt in range(self.retries + 1):
+                self.limiter.wait()
+                self.stats["requests"] += 1
+                try:
+                    raw = self.fetch(url, self.timeout)
+                    payload = json.loads(raw.decode("utf-8"))
+                    break
+                except urllib.error.HTTPError as exc:
+                    # Free API tiers rate-limit (429) or wobble (502-504): wait and retry a couple of times.
+                    if exc.code in (429, 502, 503, 504) and attempt < self.retries:
+                        self.stats["retries"] = self.stats.get("retries", 0) + 1
+                        self.sleep(_retry_after(exc, attempt))
+                        continue
+                    raise
         except urllib.error.HTTPError as exc:
             self.stats["errors"] += 1
             return self._fallback(url, exc.code, _http_message(exc.code))
@@ -145,6 +159,17 @@ class HttpSource:
             return {"source": self.name, "url": url, "fetched_at": stale["fetched_at"],
                     "cache": "stale", "warning": message, "data": stale["payload"]}
         raise SourceError(self.name, message, status)
+
+
+def _retry_after(exc, attempt: int) -> float:
+    """Seconds to wait: the server's Retry-After header if sane, else 3 s then 9 s."""
+    try:
+        value = float((exc.headers or {}).get("Retry-After", ""))
+        if 0 < value <= 30:
+            return value
+    except (TypeError, ValueError):
+        pass
+    return 3.0 * (3 ** attempt)
 
 
 def _http_message(code: int) -> str:

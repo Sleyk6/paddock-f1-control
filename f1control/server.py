@@ -22,7 +22,7 @@ from .sources import (JOLPICA_BASE, OPENF1_BASE, DiskCache, FixtureSource, HttpS
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(ROOT, "static")
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 log = logging.getLogger("f1control")
 
 
@@ -143,7 +143,7 @@ def build_service(fixtures: bool, cache_dir: str) -> tuple[F1Service, str]:
     cache = DiskCache(cache_dir)
     # Jolpica allows 4 req/s burst; we stay well under. OpenF1 free tier is also limited.
     return F1Service(HttpSource("Jolpica-F1", JOLPICA_BASE, cache, 0.3),
-                     HttpSource("OpenF1", OPENF1_BASE, cache, 0.5)), "live"
+                     HttpSource("OpenF1", OPENF1_BASE, cache, 0.6)), "live"
 
 
 def main(argv=None):

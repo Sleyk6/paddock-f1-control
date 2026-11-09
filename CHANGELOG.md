@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.2 (2026-11-09)
+- Auto-retry when a data source rate-limits (429) or hiccups (502-504), honouring Retry-After; OpenF1 spacing 0.6 s.
+
 ## 0.2.1 (2026-11-09)
 - Results detail: driver nationality flags, places gained/lost from grid, purple fastest lap, per-driver tyre stint strip, team-colour row accents and chips. More simplified flags (Thailand, Denmark, Finland, New Zealand, Argentina and others). No team logos or driver photos (trademarks / real-person images).
 
