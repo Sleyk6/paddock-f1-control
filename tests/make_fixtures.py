@@ -186,6 +186,14 @@ for i, d in enumerate(DRIVERS):
                                 "date_start": qtime(st + 100), "lap_duration": round(91.6 - run * 0.35 + i * 0.11 + rng.uniform(0, .08), 3),
                                 "is_pit_out_lap": False})
 openf1["/drivers"] += [{**x, "session_key": 9991} for x in openf1["/drivers"] if x["session_key"] == SESSION]
+for i, d in enumerate(DRIVERS):  # 1 Hz positions during each out-lap + flying lap
+    for run, base in enumerate((300, 1500, 2700)):
+        st = base + i * 25
+        for k in range(0, 192):
+            a = 2 * math.pi * (k / 96.0)
+            openf1["/location"].append({"session_key": 9991, "driver_number": int(d[2]), "z": 0, "date": qtime(Q0 + st + k),
+                                        "x": round(4000 * math.cos(a) + 900 * math.cos(3 * a)),
+                                        "y": round(2200 * math.sin(a) - 600 * math.sin(2 * a))})
 openf1["/race_control"] += [
     {"session_key": 9991, "lap_number": None, "category": "Flag", "flag": "GREEN", "scope": "Track", "message": "GREEN LIGHT - PIT EXIT OPEN", "date": qtime(Q0)},
     {"session_key": 9991, "lap_number": None, "category": "Flag", "flag": "YELLOW", "scope": "Sector", "message": "YELLOW IN TRACK SECTOR 4", "date": qtime(Q0 + 900)},

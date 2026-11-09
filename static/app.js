@@ -149,7 +149,8 @@ const views = {
     const r = await api("replay", { season: state.season, round: state.round, session: sessName });
     state.simData = r.data;
     state.simT = 0;
-    const opts = ["Qualifying", "Sprint Qualifying", "Practice 1", "Practice 2", "Practice 3"].map((n) => `<option ${n === sessName ? "selected" : ""}>${n}</option>`).join("");
+    state.pos = { windows: {}, pending: {} };
+    const opts = ["Qualifying", "Sprint Qualifying", "Race", "Sprint", "Practice 1", "Practice 2", "Practice 3"].map((n) => `<option ${n === sessName ? "selected" : ""}>${n}</option>`).join("");
     const html = `<div class="simbanner">SIMULATION · replay of ${esc(r.data.session)} (${esc(r.data.session_start.slice(0, 16).replace("T", " "))}Z) as if it were live · not real-time data</div>
       <div class="card"><h2>Live drill · ${esc(r.data.race)}</h2>
         <div class="pickers"><label>Session <select id="simS">${opts}</select></label>
@@ -356,12 +357,59 @@ function fmtClock(sec) {
 function stopSim() {
   if (state.simTimer) clearInterval(state.simTimer);
   state.simTimer = null;
+  const g = document.querySelector("#trackmap #cars");
+  if (g && state.tab !== "live") g.innerHTML = "";
+}
+
+const POS_WIN = 120;
+async function loadPosWindow(w) {
+  const P = state.pos;
+  if (!P || P.windows[w] || P.pending[w] || !state.simData) return;
+  P.pending[w] = true;
+  try {
+    const r = await api("positions", { season: state.season, round: state.round, session: state.simData.session, from: w, to: w + POS_WIN });
+    P.windows[w] = r.data.cars;
+  } catch (e) {
+    P.windows[w] = {};
+    P.error = e.message;
+  } finally { delete P.pending[w]; }
+}
+
+function drawCars(t) {
+  const svg = $("#trackmap svg");
+  if (!svg || !state.pos) return;
+  const w = Math.floor(t / POS_WIN) * POS_WIN;
+  loadPosWindow(w);
+  if (t - w > POS_WIN * 0.7) loadPosWindow(w + POS_WIN);  // prefetch the next two minutes
+  const cars = state.pos.windows[w] || {};
+  const drivers = Object.fromEntries(state.simData.drivers.map((x) => [String(x.number), x]));
+  let g = svg.querySelector("#cars");
+  if (!g) { g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.id = "cars"; svg.appendChild(g); }
+  let out = "";
+  for (const [num, pts] of Object.entries(cars)) {
+    let i = pts.length - 1;
+    while (i >= 0 && pts[i][0] > t) i--;
+    if (i < 0 || t - pts[i][0] > 4) continue;  // no recent fix: car in garage / not running
+    let [, x, y] = pts[i];
+    const nxt = pts[i + 1];
+    if (nxt && nxt[0] - pts[i][0] <= 2) {  // smooth between seconds
+      const f = Math.min(1, (t - pts[i][0]) / (nxt[0] - pts[i][0]));
+      x += (nxt[1] - x) * f; y += (nxt[2] - y) * f;
+    }
+    const dr = drivers[num] || {};
+    const col = /^#[0-9A-Fa-f]{6}$/.test(dr.team_colour || "") ? dr.team_colour : "#e9eef7";
+    out += `<g class="car"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="${col}"/><text x="${(x + 3.2).toFixed(1)}" y="${(y - 2.2).toFixed(1)}" class="carlbl">${esc(dr.code || num)}</text></g>`;
+  }
+  g.innerHTML = out;
+  const n = (out.match(/class="car"/g) || []).length;
+  $("#map-note").textContent = state.pos.error ? "Car tracker: " + state.pos.error : `Car tracker · ${n} car${n === 1 ? "" : "s"} on track · OpenF1 positions (replay)`;
 }
 
 function simFrame() {
   const d = state.simData;
   if (!d) return;
   const t = state.simT;
+  drawCars(t);
   const drivers = Object.fromEntries(d.drivers.map((x) => [x.number, x]));
   const per = {};
   let newest = null;
@@ -444,7 +492,7 @@ async function loadMap(key) {
     const m = await api("trackmap", { season: state.season, round: state.round });
     if (state.mapKey !== key) return;
     const pts = m.data.points.map((p) => p.join(",")).join(" ");
-    $("#trackmap").innerHTML = `<svg viewBox="-4 -4 ${m.data.width + 8} ${m.data.height + 8}" role="img" aria-label="Track map of ${esc(m.data.circuit)}"><polygon class="track-glow" points="${pts}"/><polygon class="track" points="${pts}"/><circle class="sf" cx="${m.data.points[0][0]}" cy="${m.data.points[0][1]}" r="2.2"/></svg>`;
+    $("#trackmap").innerHTML = `<svg viewBox="-8 -8 ${m.data.width + 22} ${m.data.height + 16}" role="img" aria-label="Track map of ${esc(m.data.circuit)}"><polygon class="track-glow" points="${pts}"/><polygon class="track" points="${pts}"/><circle class="sf" cx="${m.data.points[0][0]}" cy="${m.data.points[0][1]}" r="2.2"/></svg>`;
     $("#map-note").textContent = (m.meta.notes[0] || `Traced from car position data, ${m.data.traced_from.date}`) + " · OpenF1";
   } catch (e) {
     if (state.mapKey === key) { $("#trackmap").innerHTML = ""; $("#map-note").textContent = "No track map: " + e.message; }

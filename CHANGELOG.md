@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 (2026-11-09)
+- **Car tracker:** in Live drill, every car is a team-coloured dot with its code, moving around the track map from OpenF1 position data (1 fix per second, smoothed; loaded 2 minutes at a time). Cars in the garage disappear.
+- Live drill can also replay the Race and Sprint.
+
 ## 0.4.0 (2026-11-09)
 - **Live drill:** replays a finished qualifying or practice session on a simulated clock (10x-120x). Timing tower updates as laps finish (new bests flash purple), race-control feed, and the track map flashes yellow/red/green with track status. Always labelled SIMULATION.
 

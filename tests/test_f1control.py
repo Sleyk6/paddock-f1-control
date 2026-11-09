@@ -266,6 +266,16 @@ class ReplayTests(unittest.TestCase):
         self.assertIn((1900.0, "RED"), sts)
         self.assertEqual(sts[-1], (3600.0, "CHEQUERED"))
 
+    def test_car_positions_use_track_map_coordinates(self):
+        svc, _ = build_service(True, "")
+        d = svc.positions(2024, 1, "Qualifying", 300, 420)["data"]
+        self.assertEqual(sorted(d["cars"]), ["1", "2", "3", "4", "5"])  # car 6 starts its run later
+        pts = d["cars"]["1"]
+        self.assertEqual(len(pts), 120)  # one per second
+        self.assertTrue(all(-1 <= x <= 101 and -1 <= y <= 101 for _, x, y in pts))
+        with self.assertRaises(SourceError):
+            svc.positions(2024, 1, "Qualifying", 0, 500)  # window too long
+
     def test_replay_missing_session(self):
         svc, _ = build_service(True, "")
         with self.assertRaises(SourceError):
@@ -309,7 +319,8 @@ class ServerTests(unittest.TestCase):
 
     def test_new_endpoints(self):
         self.assertEqual(self.get("/api/replay?season=2024&round=1&session=Hacker")[0], 400)
-        for path in ("/api/replay?season=2024&round=1&session=Qualifying", "/api/weekend?season=2024&round=1", "/api/weather?season=2024&round=1", "/api/points?season=2024", "/api/trackmap?season=2024&round=1", "/api/racecontrol?season=2024&round=1"):
+        for path in ("/api/positions?season=2024&round=1&session=Qualifying&from=300&to=360",
+                     "/api/replay?season=2024&round=1&session=Qualifying", "/api/weekend?season=2024&round=1", "/api/weather?season=2024&round=1", "/api/points?season=2024", "/api/trackmap?season=2024&round=1", "/api/racecontrol?season=2024&round=1"):
             self.assertEqual(self.get(path)[0], 200, path)
 
     def test_bad_input_rejected(self):

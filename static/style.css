@@ -246,3 +246,7 @@ ul.feed li { font: 12px var(--mono); }
   .hero-map:has(.beacon.st-RED), .hero-map:has(.beacon.st-YELLOW) { animation: mapflash 1s ease-in-out infinite; }
 }
 @keyframes mapflash { 50% { box-shadow: 0 0 40px var(--beacon); } }
+
+/* ---------- v0.5: car tracker ---------- */
+#cars circle { stroke: #05070d; stroke-width: .8; filter: drop-shadow(0 0 2px rgba(255, 255, 255, .6)); }
+.carlbl { fill: #e9eef7; font: 700 4px var(--mono); paint-order: stroke; stroke: #05070d; stroke-width: 1px; }

@@ -459,9 +459,35 @@ class F1Service:
             length = max(length, (_parse_iso(sess["date_end"]) - t0).total_seconds())
         return self._wrap(season, [s_env, l_env, d_env, rc_env], {
             "season": season, "round": rnd, "race": race["name"], "session": session_name,
-            "session_start": sess["date_start"], "length_s": round(length), "drivers": list(drivers.values()),
+            "session_start": sess["date_start"], "session_key": sess["session_key"], "length_s": round(length),
+            "drivers": list(drivers.values()),
             "laps": laps, "status": status_events,
             "label": "SIMULATION - replay of a finished session, not live data"})
+
+    # ---- Car tracker: positions for a window of a replayed session -------------
+    def positions(self, season: int, rnd: int, session_name: str, t_from: int, t_to: int) -> dict:
+        """Car positions (1 per second per car) between t_from and t_to seconds after session start,
+        in the same 0-100 coordinates as the track map."""
+        if t_to <= t_from or t_to - t_from > 180:
+            raise SourceError("PADDOCK", "window must be 1-180 seconds", 400)
+        tm = self.track_map(season, rnd)["data"]["transform"]
+        rp = self.replay(season, rnd, session_name)["data"]
+        t0 = _parse_iso(rp["session_start"])
+        ttl = self._ttl(season)
+        key = str(rp["session_key"])
+        env = self.openf1.get("/location", [("session_key", "=", key),
+                                            ("date", ">=", _fmt_iso(t0 + timedelta(seconds=t_from))),
+                                            ("date", "<", _fmt_iso(t0 + timedelta(seconds=t_to)))], ttl=ttl)
+        cars: dict = {}
+        for p in env["data"]:
+            if p.get("x") is None or p.get("date") is None or (p.get("x") == 0 and p.get("y") == 0):
+                continue  # (0,0) means no fix (car in garage)
+            t = round((_parse_iso(p["date"]) - t0).total_seconds())
+            x = round((p["x"] - tm["min_x"]) / tm["span"] * 100, 1)
+            y = round((tm["max_y"] - p["y"]) / tm["span"] * 100, 1)
+            cars.setdefault(p["driver_number"], {})[t] = [t, x, y]  # keep one point per second
+        return self._wrap(season, [env], {"from": t_from, "to": t_to,
+                                          "cars": {str(n): sorted(v.values()) for n, v in cars.items()}})
 
     # ---- Track map + race control (OpenF1 location / race_control) -----------
     def _past_session_for_circuit(self, season: int, rnd: int):
@@ -516,7 +542,8 @@ class F1Service:
         return self._wrap(year, [loc], {"season": season, "round": rnd, "circuit": race["circuit"], "country": race["country"],
                                         "traced_from": {"season": year, "date": used["date"]},
                                         "width": round((max(xs) - min(xs)) / span * 100, 1),
-                                        "height": round((max(ys) - min(ys)) / span * 100, 1), "points": norm}, notes)
+                                        "height": round((max(ys) - min(ys)) / span * 100, 1), "points": norm,
+                                        "transform": {"min_x": min(xs), "max_y": max(ys), "span": span}}, notes)
 
     def race_control(self, season: int, rnd: int) -> dict:
         if season < OPENF1_FIRST_SEASON:
