@@ -11,7 +11,7 @@ import urllib.request
 from http.server import ThreadingHTTPServer
 
 from f1control.server import build_service, make_app
-from f1control.service import F1Service, downsample, parse_laptime
+from f1control.service import F1Service, downsample, driver_code, parse_laptime
 from f1control.sources import DiskCache, HttpSource, SourceError, build_query
 
 
@@ -386,3 +386,11 @@ class CurrentYearTest(unittest.TestCase):
         from datetime import datetime, timezone
         self.assertEqual(F1Service(None, None, current_year=2024).current_year, 2024)
         self.assertEqual(F1Service(None, None).current_year, datetime.now(timezone.utc).year)
+
+
+class DriverCodeTest(unittest.TestCase):
+    def test_fallbacks(self):
+        self.assertEqual(driver_code({"code": "VER", "familyName": "Verstappen"}), "VER")
+        self.assertEqual(driver_code({"familyName": "Camara", "driverId": "rafael_camara"}), "CAM")
+        self.assertEqual(driver_code({"driverId": "rafael_camara"}), "CAM")
+        self.assertEqual(driver_code({}), "???")

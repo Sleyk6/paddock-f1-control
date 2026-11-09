@@ -11,6 +11,14 @@ from . import strategy as strat
 OPENF1_FIRST_SEASON = 2023  # OpenF1 historical coverage starts with the 2023 season
 
 
+def driver_code(d: dict) -> str:
+    """3-letter code; rookies can be missing one in early data, so fall back to the surname."""
+    if d.get("code"):
+        return d["code"]
+    name = d.get("familyName") or str(d.get("driverId", "")).split("_")[-1]
+    return "".join(ch for ch in name if ch.isalpha())[:3].upper() or "???"
+
+
 def parse_laptime(text: str | None) -> float | None:
     """'1:32.456' -> 92.456 seconds; '58.1' -> 58.1; bad input -> None."""
     if not text:
@@ -294,8 +302,9 @@ class F1Service:
     def strategy(self, season: int, rnd: int) -> dict:
         race, r_env = self._race_results(season, rnd)
         stops_races, p_envs = self._jolpica_all(season, f"/{season}/{rnd}/pitstops.json", "PitStops")
-        codes = {r["Driver"]["driverId"]: r["Driver"].get("code") for r in race["Results"]}
-        stops = [{"driver_id": p["driverId"], "code": codes.get(p["driverId"]), "stop": int(p["stop"]),
+        codes = {r["Driver"]["driverId"]: driver_code(r["Driver"]) for r in race["Results"]}
+        stops = [{"driver_id": p["driverId"], "code": codes.get(p["driverId"]) or driver_code({"driverId": p["driverId"]}),
+                  "stop": int(p["stop"]),
                   "lap": int(p["lap"]), "duration": p.get("duration")}
                  for rr in stops_races for p in rr.get("PitStops", [])]
         envelopes, notes, stints = [r_env] + p_envs, [], []

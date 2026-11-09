@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.4 (2026-11-09)
+- Pit stops: a driver without an official 3-letter code (e.g. a rookie early in the data) now shows a code built from the surname instead of the raw driver ID.
+
 ## 0.6.3 (2026-11-09)
 - **Stays current by itself.** The page opens on the most recent race that has happened, instead of round 1.
 - Every hour (and when you come back to the tab after an hour away) it re-pulls the calendar, countdown and the page you are on, and moves to the newest race if one has finished. The footer shows "updated <day> <time>".
