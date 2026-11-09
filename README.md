@@ -43,4 +43,3 @@ Nothing is shown as **live**. Real-time timing from OpenF1 needs a paid or spons
 | Tyre stints, telemetry | OpenF1 | 2023 onward |
 
 Unofficial personal project, not affiliated with Formula 1 companies. No F1 logos or official graphics are used.
-Built with AI assistance (Claude), reviewed and run by the founder.
