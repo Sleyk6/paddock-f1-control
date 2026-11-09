@@ -414,6 +414,55 @@ class F1Service:
                 notes.append(f"Measured weather not available: {exc.message}")
         return self._wrap(season, envs or [{"source": "Open-Meteo", "cache": "n/a"}], out, notes)
 
+    # ---- Live drill: replay a finished session on a simulated clock -------------
+    def replay(self, season: int, rnd: int, session_name: str = "Qualifying") -> dict:
+        if season < OPENF1_FIRST_SEASON:
+            raise SourceError("OpenF1", f"session replay needs OpenF1 data ({OPENF1_FIRST_SEASON} onward)", 404)
+        cal = self.calendar(season)["data"]["races"]
+        race = next((r for r in cal if r["round"] == rnd), None)
+        if race is None:
+            raise SourceError("Jolpica-F1", f"no round {rnd} in {season}", 404)
+        ttl = self._ttl(season)
+        s_env = self.openf1.get("/sessions", [("year", "=", str(season))], ttl=ttl)
+        start_win = (datetime.fromisoformat(race["date"]) - timedelta(days=4)).date().isoformat()
+        cands = [x for x in s_env["data"] if x.get("session_name") == session_name
+                 and start_win <= str(x.get("date_start", ""))[:10] <= race["date"]]
+        if not cands:
+            raise SourceError("OpenF1", f"no {session_name} session published for this weekend yet", 404)
+        sess = cands[0]
+        key = str(sess["session_key"])
+        t0 = _parse_iso(sess["date_start"])
+        l_env = self.openf1.get("/laps", [("session_key", "=", key)], ttl=ttl)
+        d_env = self.openf1.get("/drivers", [("session_key", "=", key)], ttl=ttl)
+        rc_env = self.openf1.get("/race_control", [("session_key", "=", key)], ttl=ttl)
+        drivers = {d["driver_number"]: {"number": d["driver_number"], "code": d.get("name_acronym"),
+                                        "team": d.get("team_name"),
+                                        "team_colour": "#" + d["team_colour"] if re.fullmatch(r"[0-9A-Fa-f]{6}", str(d.get("team_colour") or "")) else None}
+                   for d in d_env["data"]}
+        laps = []
+        for lap in l_env["data"]:
+            if not lap.get("date_start") or not lap.get("lap_duration") or lap.get("is_pit_out_lap"):
+                continue
+            end = (_parse_iso(lap["date_start"]) - t0).total_seconds() + float(lap["lap_duration"])
+            laps.append({"t": round(end, 2), "driver": lap["driver_number"], "time": float(lap["lap_duration"])})
+        laps.sort(key=lambda x: x["t"])
+        status_events = [{"t": 0.0, "status": "GREEN", "message": "Session start"}]
+        for m in sorted(rc_env["data"], key=lambda m: m.get("date") or ""):
+            if not m.get("date"):
+                continue
+            st = _status_from_message(m)
+            if st:
+                status_events.append({"t": round((_parse_iso(m["date"]) - t0).total_seconds(), 2), "status": st,
+                                      "message": m.get("message")})
+        length = max([x["t"] for x in laps] + [e["t"] for e in status_events] + [1.0])
+        if sess.get("date_end"):
+            length = max(length, (_parse_iso(sess["date_end"]) - t0).total_seconds())
+        return self._wrap(season, [s_env, l_env, d_env, rc_env], {
+            "season": season, "round": rnd, "race": race["name"], "session": session_name,
+            "session_start": sess["date_start"], "length_s": round(length), "drivers": list(drivers.values()),
+            "laps": laps, "status": status_events,
+            "label": "SIMULATION - replay of a finished session, not live data"})
+
     # ---- Track map + race control (OpenF1 location / race_control) -----------
     def _past_session_for_circuit(self, season: int, rnd: int):
         """The race itself if already run, else the latest earlier OpenF1-era race at the same circuit."""
@@ -548,6 +597,25 @@ def track_status_by_lap(events: list, laps: int) -> list:
                 status = "YELLOW"
         out.append(status)
     return out
+
+
+def _status_from_message(m: dict) -> str | None:
+    """Track-wide status implied by one race-control message (None = no change)."""
+    msg, flag, cat = str(m.get("message") or "").upper(), str(m.get("flag") or "").upper(), str(m.get("category") or "")
+    scope = m.get("scope")
+    if flag == "RED":
+        return "RED"
+    if flag == "CHEQUERED":
+        return "CHEQUERED"
+    if "VIRTUAL SAFETY CAR DEPLOYED" in msg or "VSC DEPLOYED" in msg:
+        return "VSC"
+    if cat == "SafetyCar" and "DEPLOYED" in msg:
+        return "SC"
+    if flag in ("YELLOW", "DOUBLE YELLOW"):
+        return "YELLOW"  # in a replay any yellow is worth flashing
+    if flag in ("GREEN", "CLEAR") or "ENDING" in msg or "TRACK CLEAR" in msg or "IN THIS LAP" in msg:
+        return "GREEN"
+    return None
 
 
 def _strategy_of(stints: list, number: int) -> tuple[tuple, tuple]:

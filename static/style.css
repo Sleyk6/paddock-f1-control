@@ -228,3 +228,21 @@ td.drv svg.flag { margin-left: -2px; }
 tr.q2out td, tr.q1out td { color: var(--muted); }
 tr.q1out td { opacity: .7; }
 .warn { color: var(--warn); }
+
+/* ---------- v0.4: live drill ---------- */
+.simbanner { margin-bottom: 14px; padding: 8px 12px; font: 700 12px var(--mono); letter-spacing: .16em; text-transform: uppercase;
+  color: #05070d; background: repeating-linear-gradient(135deg, var(--warn) 0 14px, #e0a83a 14px 28px); }
+.simclock { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; }
+#simClock { font: 700 40px/1 var(--display); letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.simstate { margin-left: auto; font: 700 12px var(--mono); letter-spacing: .2em; color: var(--warn); }
+.simbar { height: 4px; background: rgba(255, 255, 255, .08); margin-top: 10px; }
+.simbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--red), var(--cyan)); }
+#tower tr.flash td { background: rgba(178, 107, 255, .16); }
+#tower tr.flash td:nth-child(3) { color: #b26bff; font-weight: 700; }
+ul.feed li { font: 12px var(--mono); }
+.st-txt-RED { color: var(--red); } .st-txt-YELLOW { color: #ffd400; } .st-txt-GREEN { color: var(--ok); } .st-txt-CHEQUERED { color: #fff; }
+.st-txt-SC, .st-txt-VSC { color: #ffb000; }
+@media (prefers-reduced-motion: no-preference) {
+  .hero-map:has(.beacon.st-RED), .hero-map:has(.beacon.st-YELLOW) { animation: mapflash 1s ease-in-out infinite; }
+}
+@keyframes mapflash { 50% { box-shadow: 0 0 40px var(--beacon); } }

@@ -171,6 +171,29 @@ for i, d in enumerate(DRIVERS):
                                 "date_start": "2024-02-29T11:40:00+00:00", "lap_duration": round(93.0 + i * 0.2 - k * 0.3, 3),
                                 "is_pit_out_lap": k == 0})
 openf1["/drivers"] += [{**x, "session_key": 9990} for x in openf1["/drivers"] if x["session_key"] == SESSION]
+# Qualifying (OpenF1): session 9991 the day before, 3 runs per car, a red flag mid-session
+Q0 = 14 * 3600 + 0.0
+def qtime(sec):
+    return f"2024-03-01T{int(sec // 3600):02d}:{int(sec % 3600 // 60):02d}:{sec % 60:09.6f}+00:00"
+openf1["/sessions"].insert(1, {"session_key": 9991, "session_name": "Qualifying", "year": 2024,
+                               "date_start": qtime(Q0), "date_end": qtime(Q0 + 3600)})
+for i, d in enumerate(DRIVERS):
+    for run, base in enumerate((300, 1500, 2700)):
+        st = Q0 + base + i * 25
+        openf1["/laps"].append({"session_key": 9991, "driver_number": int(d[2]), "lap_number": run * 2 + 1,
+                                "date_start": qtime(st), "lap_duration": 100.0, "is_pit_out_lap": True})
+        openf1["/laps"].append({"session_key": 9991, "driver_number": int(d[2]), "lap_number": run * 2 + 2,
+                                "date_start": qtime(st + 100), "lap_duration": round(91.6 - run * 0.35 + i * 0.11 + rng.uniform(0, .08), 3),
+                                "is_pit_out_lap": False})
+openf1["/drivers"] += [{**x, "session_key": 9991} for x in openf1["/drivers"] if x["session_key"] == SESSION]
+openf1["/race_control"] += [
+    {"session_key": 9991, "lap_number": None, "category": "Flag", "flag": "GREEN", "scope": "Track", "message": "GREEN LIGHT - PIT EXIT OPEN", "date": qtime(Q0)},
+    {"session_key": 9991, "lap_number": None, "category": "Flag", "flag": "YELLOW", "scope": "Sector", "message": "YELLOW IN TRACK SECTOR 4", "date": qtime(Q0 + 900)},
+    {"session_key": 9991, "lap_number": None, "category": "Flag", "flag": "CLEAR", "scope": "Sector", "message": "CLEAR IN TRACK SECTOR 4", "date": qtime(Q0 + 960)},
+    {"session_key": 9991, "lap_number": None, "category": "Flag", "flag": "RED", "scope": "Track", "message": "RED FLAG", "date": qtime(Q0 + 1900)},
+    {"session_key": 9991, "lap_number": None, "category": "Flag", "flag": "GREEN", "scope": "Track", "message": "GREEN LIGHT - PIT EXIT OPEN", "date": qtime(Q0 + 2400)},
+    {"session_key": 9991, "lap_number": None, "category": "Flag", "flag": "CHEQUERED", "scope": "Track", "message": "CHEQUERED FLAG", "date": qtime(Q0 + 3600)}]
+
 # Track weather station during the race (OpenF1)
 openf1["/weather"] = [{"session_key": SESSION, "date": f"{RACE_DATE}T15:{m:02d}:00+00:00", "air_temperature": 24 + m / 30,
                        "track_temperature": 38 + m / 15, "humidity": 55, "rainfall": 0} for m in range(0, 31, 5)]

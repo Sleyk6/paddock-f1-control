@@ -22,7 +22,7 @@ from .sources import (JOLPICA_BASE, OPENF1_BASE, OPENMETEO_BASE, DiskCache, Fixt
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(ROOT, "static")
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 log = logging.getLogger("f1control")
 
 
@@ -68,6 +68,11 @@ def make_app(service: F1Service, mode: str):
             return service.compare(season(), rnd(), _driver(q, "a"), _driver(q, "b"))
         if path == "/api/strategy":
             return service.strategy(season(), rnd())
+        if path == "/api/replay":
+            name = (q.get("session") or ["Qualifying"])[0]
+            if name not in ("Qualifying", "Sprint Qualifying", "Practice 1", "Practice 2", "Practice 3", "Race", "Sprint"):
+                raise BadRequest("unknown session name")
+            return service.replay(season(), rnd(), name)
         if path == "/api/weekend":
             return service.weekend(season(), rnd())
         if path == "/api/weather":

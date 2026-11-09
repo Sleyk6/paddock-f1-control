@@ -144,6 +144,23 @@ const views = {
         <div class="legend">${d.series.map((s, i) => `<span><i class="sw" data-c="${i}"></i>${esc(s.code || s.driver_id)}</span>`).join("")}</div></div>
       <div class="card"><h2>Title fight</h2>${notes(r.meta)}<div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Pts</th><th class="num">Gap</th><th>Mathematically</th></tr></thead><tbody>${rows}</tbody></table></div></div>`, paintSwatches];
   },
+  async live() {
+    const sessName = state.simSession || "Qualifying";
+    const r = await api("replay", { season: state.season, round: state.round, session: sessName });
+    state.simData = r.data;
+    state.simT = 0;
+    const opts = ["Qualifying", "Sprint Qualifying", "Practice 1", "Practice 2", "Practice 3"].map((n) => `<option ${n === sessName ? "selected" : ""}>${n}</option>`).join("");
+    const html = `<div class="simbanner">SIMULATION · replay of ${esc(r.data.session)} (${esc(r.data.session_start.slice(0, 16).replace("T", " "))}Z) as if it were live · not real-time data</div>
+      <div class="card"><h2>Live drill · ${esc(r.data.race)}</h2>
+        <div class="pickers"><label>Session <select id="simS">${opts}</select></label>
+          <label>Speed <select id="simX"><option value="10">10×</option><option value="30" selected>30×</option><option value="60">60×</option><option value="120">120×</option></select></label>
+          <button id="simGo" type="button">Start</button><button id="simPause" type="button">Pause</button><button id="simReset" type="button">Reset</button></div>
+        <div class="simclock"><span id="simClock">00:00</span><span class="sub"> / ${fmtClock(r.data.length_s)} session time</span><span id="simState" class="simstate">READY</span></div>
+        <div class="simbar"><i id="simProg"></i></div></div>
+      <div class="grid2"><div class="card"><h2>Timing tower</h2><div class="tablewrap"><table><thead><tr><th class="num">P</th><th>Driver</th><th class="num">Best</th><th class="num">Gap</th><th class="num">Last</th><th class="num">Laps</th></tr></thead><tbody id="tower"><tr><td colspan="6" class="sub">Press Start.</td></tr></tbody></table></div></div>
+      <div class="card"><h2>Race control</h2><ul class="plain feed" id="feed"><li class="sub">Waiting for session start…</li></ul></div></div>`;
+    return [r.meta, html, bindSim];
+  },
   async weekend() {
     const [wk, wx] = await Promise.all([
       api("weekend", { season: state.season, round: state.round }),
@@ -331,6 +348,62 @@ async function updateStatusForLap(lap) {
   if (strip && state.status) strip.innerHTML = state.status.by.map((s, i) => `<i class="fs st-${s}${i + 1 === +lap ? " cur" : ""}" title="Lap ${i + 1}: ${STATUS[s] || s}"></i>`).join("");
 }
 
+function fmtClock(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  return `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+}
+
+function stopSim() {
+  if (state.simTimer) clearInterval(state.simTimer);
+  state.simTimer = null;
+}
+
+function simFrame() {
+  const d = state.simData;
+  if (!d) return;
+  const t = state.simT;
+  const drivers = Object.fromEntries(d.drivers.map((x) => [x.number, x]));
+  const per = {};
+  let newest = null;
+  for (const lap of d.laps) {
+    if (lap.t > t) break;
+    const p = per[lap.driver] || (per[lap.driver] = { best: Infinity, last: null, laps: 0, bestAt: 0 });
+    p.last = lap.time; p.laps += 1;
+    if (lap.time < p.best) { p.best = lap.time; p.bestAt = lap.t; }
+    newest = lap;
+  }
+  const rows = Object.entries(per).sort((a, b) => a[1].best - b[1].best);
+  const top = rows.length ? rows[0][1].best : 0;
+  $("#tower").innerHTML = rows.map(([num, p], i) => {
+    const dr = drivers[num] || { number: num };
+    const fresh = t - p.bestAt < 12 * (state.simSpeed || 30) / 30;
+    return `<tr class="${i === 0 ? "pos1" : ""} ${fresh ? "flash" : ""}" data-team="${esc(dr.team_colour || "")}"><td class="num">${i + 1}</td><td class="drv">${plate(dr, 22)}<span>${esc(dr.code || num)}</span></td><td class="num">${fmtTime(p.best)}</td><td class="num">${i ? "+" + (p.best - top).toFixed(3) : "–"}</td><td class="num">${fmtTime(p.last)}</td><td class="num">${p.laps}</td></tr>`;
+  }).join("") || `<tr><td colspan="6" class="sub">No timed laps yet.</td></tr>`;
+  paintTeams();
+  const events = d.status.filter((e) => e.t <= t);
+  const cur = events.length ? events[events.length - 1] : { status: "GREEN" };
+  state.status = { lap: fmtClock(t), status: cur.status, by: [] };
+  setBeacon(state.status);
+  $("#beacon-text").textContent = `SIM ${fmtClock(t)} · ${STATUS[cur.status] || cur.status}`;
+  $("#feed").innerHTML = events.slice(-8).reverse().map((e) => `<li><b class="st-txt-${esc(e.status)}">${fmtClock(e.t)}</b> ${esc(e.message || e.status)}</li>`).join("");
+  $("#simClock").textContent = fmtClock(t);
+  $("#simProg").style.width = `${Math.min(100, (t / d.length_s) * 100)}%`;
+  if (t >= d.length_s) { stopSim(); $("#simState").textContent = "FINISHED"; }
+}
+
+function bindSim() {
+  state.simSpeed = 30;
+  $("#simS").onchange = (e) => { stopSim(); state.simSession = e.target.value; show(); };
+  $("#simX").onchange = (e) => { state.simSpeed = +e.target.value; };
+  $("#simGo").onclick = () => {
+    if (state.simTimer) return;
+    $("#simState").textContent = "SIMULATED LIVE";
+    state.simTimer = setInterval(() => { state.simT += 0.25 * state.simSpeed; simFrame(); }, 250);
+  };
+  $("#simPause").onclick = () => { stopSim(); $("#simState").textContent = "PAUSED"; };
+  $("#simReset").onclick = () => { stopSim(); state.simT = 0; $("#simState").textContent = "READY"; simFrame(); };
+}
+
 function bindTel() {
   updateStatusForLap(+(state.telLap || 5));
   $("#telGo").onclick = () => { state.telDriver = $("#telD").value; state.telLap = $("#telL").value; show(); };
@@ -338,6 +411,7 @@ function bindTel() {
 
 async function show() {
   const view = $("#view");
+  stopSim();
   view.innerHTML = `<p class="loading">Acquiring ${esc(state.tab)} data</p>`;
   setHero();
   try {

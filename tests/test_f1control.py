@@ -255,6 +255,23 @@ class WeekendTests(unittest.TestCase):
         self.assertIn("16 days", self.svc.weather(2024, 1)["meta"]["notes"][0])
 
 
+class ReplayTests(unittest.TestCase):
+    def test_qualifying_replay_timeline(self):
+        svc, _ = build_service(True, "")
+        d = svc.replay(2024, 1, "Qualifying")["data"]
+        self.assertIn("SIMULATION", d["label"])
+        self.assertEqual(len(d["laps"]), 18)  # out-laps excluded
+        self.assertEqual([x["t"] for x in d["laps"]], sorted(x["t"] for x in d["laps"]))
+        sts = [(e["t"], e["status"]) for e in d["status"]]
+        self.assertIn((1900.0, "RED"), sts)
+        self.assertEqual(sts[-1], (3600.0, "CHEQUERED"))
+
+    def test_replay_missing_session(self):
+        svc, _ = build_service(True, "")
+        with self.assertRaises(SourceError):
+            svc.replay(2024, 1, "Sprint Qualifying")
+
+
 class ServerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -291,7 +308,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.get("/api/projection?season=2024&round=1&soft=99")[0], 400)
 
     def test_new_endpoints(self):
-        for path in ("/api/weekend?season=2024&round=1", "/api/weather?season=2024&round=1", "/api/points?season=2024", "/api/trackmap?season=2024&round=1", "/api/racecontrol?season=2024&round=1"):
+        self.assertEqual(self.get("/api/replay?season=2024&round=1&session=Hacker")[0], 400)
+        for path in ("/api/replay?season=2024&round=1&session=Qualifying", "/api/weekend?season=2024&round=1", "/api/weather?season=2024&round=1", "/api/points?season=2024", "/api/trackmap?season=2024&round=1", "/api/racecontrol?season=2024&round=1"):
             self.assertEqual(self.get(path)[0], 200, path)
 
     def test_bad_input_rejected(self):

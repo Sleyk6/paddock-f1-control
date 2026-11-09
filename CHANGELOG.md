@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.4.0 (2026-11-09)
+- **Live drill:** replays a finished qualifying or practice session on a simulated clock (10x-120x). Timing tower updates as laps finish (new bests flash purple), race-control feed, and the track map flashes yellow/red/green with track status. Always labelled SIMULATION.
+
 ## 0.3.0 (2026-11-09)
 - **Weekend tab:** session list, practice best laps with gaps (OpenF1), qualifying Q1/Q2/Q3 (Jolpica), Open-Meteo weather forecast for the weekend (temperature, rain chance, race-start conditions), measured track and air temperature for finished races.
 - Clear "server is not running" message instead of "Failed to fetch".

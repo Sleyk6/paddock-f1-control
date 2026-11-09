@@ -2191,6 +2191,13 @@
     "date_end": "2024-02-29T12:30:00+00:00"
    },
    {
+    "session_key": 9991,
+    "session_name": "Qualifying",
+    "year": 2024,
+    "date_start": "2024-03-01T14:00:00.000000+00:00",
+    "date_end": "2024-03-01T15:00:00.000000+00:00"
+   },
+   {
     "session_key": 9999,
     "session_name": "Race",
     "year": 2024,
@@ -2289,6 +2296,54 @@
    },
    {
     "session_key": 9990,
+    "driver_number": 6,
+    "name_acronym": "TDF",
+    "full_name": "TEST DRIVER FOXTROT",
+    "team_name": "Team Charlie",
+    "team_colour": "FF8000"
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 1,
+    "name_acronym": "TDA",
+    "full_name": "TEST DRIVER ALPHA",
+    "team_name": "Team Alpha",
+    "team_colour": "E8002D"
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 2,
+    "name_acronym": "TDB",
+    "full_name": "TEST DRIVER BRAVO",
+    "team_name": "Team Alpha",
+    "team_colour": "E8002D"
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 3,
+    "name_acronym": "TDC",
+    "full_name": "TEST DRIVER CHARLIE",
+    "team_name": "Team Bravo",
+    "team_colour": "27F4D2"
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 4,
+    "name_acronym": "TDD",
+    "full_name": "TEST DRIVER DELTA",
+    "team_name": "Team Bravo",
+    "team_colour": "27F4D2"
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 5,
+    "name_acronym": "TDE",
+    "full_name": "TEST DRIVER ECHO",
+    "team_name": "Team Charlie",
+    "team_colour": "FF8000"
+   },
+   {
+    "session_key": 9991,
     "driver_number": 6,
     "name_acronym": "TDF",
     "full_name": "TEST DRIVER FOXTROT",
@@ -3509,6 +3564,294 @@
     "lap_number": 3,
     "date_start": "2024-02-29T11:40:00+00:00",
     "lap_duration": 93.4,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 1,
+    "lap_number": 1,
+    "date_start": "2024-03-01T14:05:00.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 1,
+    "lap_number": 2,
+    "date_start": "2024-03-01T14:06:40.000000+00:00",
+    "lap_duration": 91.602,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 1,
+    "lap_number": 3,
+    "date_start": "2024-03-01T14:25:00.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 1,
+    "lap_number": 4,
+    "date_start": "2024-03-01T14:26:40.000000+00:00",
+    "lap_duration": 91.324,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 1,
+    "lap_number": 5,
+    "date_start": "2024-03-01T14:45:00.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 1,
+    "lap_number": 6,
+    "date_start": "2024-03-01T14:46:40.000000+00:00",
+    "lap_duration": 90.97,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 2,
+    "lap_number": 1,
+    "date_start": "2024-03-01T14:05:25.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 2,
+    "lap_number": 2,
+    "date_start": "2024-03-01T14:07:05.000000+00:00",
+    "lap_duration": 91.777,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 2,
+    "lap_number": 3,
+    "date_start": "2024-03-01T14:25:25.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 2,
+    "lap_number": 4,
+    "date_start": "2024-03-01T14:27:05.000000+00:00",
+    "lap_duration": 91.385,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 2,
+    "lap_number": 5,
+    "date_start": "2024-03-01T14:45:25.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 2,
+    "lap_number": 6,
+    "date_start": "2024-03-01T14:47:05.000000+00:00",
+    "lap_duration": 91.015,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 3,
+    "lap_number": 1,
+    "date_start": "2024-03-01T14:05:50.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 3,
+    "lap_number": 2,
+    "date_start": "2024-03-01T14:07:30.000000+00:00",
+    "lap_duration": 91.89,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 3,
+    "lap_number": 3,
+    "date_start": "2024-03-01T14:25:50.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 3,
+    "lap_number": 4,
+    "date_start": "2024-03-01T14:27:30.000000+00:00",
+    "lap_duration": 91.546,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 3,
+    "lap_number": 5,
+    "date_start": "2024-03-01T14:45:50.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 3,
+    "lap_number": 6,
+    "date_start": "2024-03-01T14:47:30.000000+00:00",
+    "lap_duration": 91.127,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 4,
+    "lap_number": 1,
+    "date_start": "2024-03-01T14:06:15.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 4,
+    "lap_number": 2,
+    "date_start": "2024-03-01T14:07:55.000000+00:00",
+    "lap_duration": 91.969,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 4,
+    "lap_number": 3,
+    "date_start": "2024-03-01T14:26:15.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 4,
+    "lap_number": 4,
+    "date_start": "2024-03-01T14:27:55.000000+00:00",
+    "lap_duration": 91.586,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 4,
+    "lap_number": 5,
+    "date_start": "2024-03-01T14:46:15.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 4,
+    "lap_number": 6,
+    "date_start": "2024-03-01T14:47:55.000000+00:00",
+    "lap_duration": 91.291,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 5,
+    "lap_number": 1,
+    "date_start": "2024-03-01T14:06:40.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 5,
+    "lap_number": 2,
+    "date_start": "2024-03-01T14:08:20.000000+00:00",
+    "lap_duration": 92.101,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 5,
+    "lap_number": 3,
+    "date_start": "2024-03-01T14:26:40.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 5,
+    "lap_number": 4,
+    "date_start": "2024-03-01T14:28:20.000000+00:00",
+    "lap_duration": 91.7,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 5,
+    "lap_number": 5,
+    "date_start": "2024-03-01T14:46:40.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 5,
+    "lap_number": 6,
+    "date_start": "2024-03-01T14:48:20.000000+00:00",
+    "lap_duration": 91.378,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 6,
+    "lap_number": 1,
+    "date_start": "2024-03-01T14:07:05.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 6,
+    "lap_number": 2,
+    "date_start": "2024-03-01T14:08:45.000000+00:00",
+    "lap_duration": 92.194,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 6,
+    "lap_number": 3,
+    "date_start": "2024-03-01T14:27:05.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 6,
+    "lap_number": 4,
+    "date_start": "2024-03-01T14:28:45.000000+00:00",
+    "lap_duration": 91.821,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 6,
+    "lap_number": 5,
+    "date_start": "2024-03-01T14:47:05.000000+00:00",
+    "lap_duration": 100.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9991,
+    "driver_number": 6,
+    "lap_number": 6,
+    "date_start": "2024-03-01T14:48:45.000000+00:00",
+    "lap_duration": 91.52,
     "is_pit_out_lap": false
    }
   ],
@@ -54958,6 +55301,60 @@
     "scope": "Track",
     "message": "CHEQUERED FLAG",
     "date": "2024-03-02T15:31:00+00:00"
+   },
+   {
+    "session_key": 9991,
+    "lap_number": null,
+    "category": "Flag",
+    "flag": "GREEN",
+    "scope": "Track",
+    "message": "GREEN LIGHT - PIT EXIT OPEN",
+    "date": "2024-03-01T14:00:00.000000+00:00"
+   },
+   {
+    "session_key": 9991,
+    "lap_number": null,
+    "category": "Flag",
+    "flag": "YELLOW",
+    "scope": "Sector",
+    "message": "YELLOW IN TRACK SECTOR 4",
+    "date": "2024-03-01T14:15:00.000000+00:00"
+   },
+   {
+    "session_key": 9991,
+    "lap_number": null,
+    "category": "Flag",
+    "flag": "CLEAR",
+    "scope": "Sector",
+    "message": "CLEAR IN TRACK SECTOR 4",
+    "date": "2024-03-01T14:16:00.000000+00:00"
+   },
+   {
+    "session_key": 9991,
+    "lap_number": null,
+    "category": "Flag",
+    "flag": "RED",
+    "scope": "Track",
+    "message": "RED FLAG",
+    "date": "2024-03-01T14:31:40.000000+00:00"
+   },
+   {
+    "session_key": 9991,
+    "lap_number": null,
+    "category": "Flag",
+    "flag": "GREEN",
+    "scope": "Track",
+    "message": "GREEN LIGHT - PIT EXIT OPEN",
+    "date": "2024-03-01T14:40:00.000000+00:00"
+   },
+   {
+    "session_key": 9991,
+    "lap_number": null,
+    "category": "Flag",
+    "flag": "CHEQUERED",
+    "scope": "Track",
+    "message": "CHEQUERED FLAG",
+    "date": "2024-03-01T15:00:00.000000+00:00"
    }
   ],
   "/weather": [
