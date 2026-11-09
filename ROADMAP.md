@@ -19,6 +19,15 @@ Data notes:
 - Practice and qualifying come from OpenF1 sessions/laps; Jolpica also has qualifying results.
 - Track weather comes from OpenF1 `weather`. The forecast needs a free weather API (e.g. Open-Meteo, no key) using the circuit's coordinates.
 
+### Building blocks to combine (researched 2026-11-09; run as separate programs and talk to them over HTTP, never copy their code)
+| Piece | Project | Licence | Use |
+|---|---|---|---|
+| Live timing, track status, race control, weather, practice/quali times | **undercut-f1** (JustAman62) | GPL-3.0 | Reads the F1 live-timing stream. Core timing needs no F1 TV login (login adds live car positions, DRS, pit times). Has an optional local HTTP API that F1 Control can poll. Needs a software install (**founder approval**) |
+| Weather forecast | **Open-Meteo** | Data CC BY 4.0 (credit required); free under 10,000 calls/day for non-commercial use, no key | Forecast for the circuit's coordinates. No install |
+| Post-session data | OpenF1 + Jolpica (already used) | n/a | Fallback when nothing is live |
+| Reference only | f1-dash (AGPL-3.0, Next.js + Rust + Docker) | AGPL-3.0 | Too heavy to embed; design reference |
+| Not suitable for live | FastF1 live-timing client | MIT | Needs F1 TV, and it only records (no real-time display) |
+
 ## Next
 - [ ] SPORTSCARS tab (WEC/ELMS/IMSA) from the open tobil/imsa dataset, via a one-time import script the founder runs
 - [ ] Sector times and a lap-by-lap position chart; two-driver telemetry overlay
