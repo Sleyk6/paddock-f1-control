@@ -39,14 +39,22 @@ circuit = {"circuitId": "test_ring", "circuitName": "Synthetic Test Ring",
 races = [{"season": SEASON, "round": str(i + 1), "raceName": f"Test Grand Prix {i + 1}", "Circuit": circuit,
           "date": f"2024-03-{2 + 7 * i:02d}", "time": "15:00:00Z"} for i in range(3)]
 
-# lap times: base pace per driver + noise; pit stop on lap 10/11 adds 20 s
+# Lap times follow a KNOWN tyre model so tests can check the fitter recovers it:
+# time = driver pace + compound offset + wear*age - fuel 0.055 s/lap + small noise; pit lap +20 s.
+# Stint 1 MEDIUM, stint 2 HARD (odd car numbers) or SOFT (even).
+TRUE = {"SOFT": (0.0, 0.12), "MEDIUM": (0.4, 0.07), "HARD": (0.8, 0.04)}  # (offset s, wear s/lap)
+FUEL = 0.055
 pace = {d[0]: 92.0 + i * 0.25 for i, d in enumerate(DRIVERS)}
 pit_lap = {d[0]: 10 + (i % 2) for i, d in enumerate(DRIVERS)}
+second = {d[0]: "HARD" if int(d[2]) % 2 else "SOFT" for d in DRIVERS}
 laps = {}
 for d in DRIVERS:
     rows = []
     for n in range(1, LAPS + 1):
-        t = pace[d[0]] + rng.uniform(-0.4, 0.6) - n * 0.03 + (20.0 if n == pit_lap[d[0]] else 0)
+        p = pit_lap[d[0]]
+        comp, age = ("MEDIUM", n) if n <= p else (second[d[0]], n - p)
+        off, wear = TRUE[comp]
+        t = pace[d[0]] + off + wear * age - FUEL * (n - 1) + rng.uniform(-0.15, 0.15) + (20.0 if n == p else 0)
         rows.append(round(t, 3))
     laps[d[0]] = rows
 total = {k: sum(v) for k, v in laps.items()}
@@ -61,7 +69,7 @@ for pos, did in enumerate(order, 1):
     results.append({"number": d[2], "position": str(pos), "positionText": str(pos), "points": str(points[pos - 1]),
                     "Driver": driver(d), "Constructor": {"constructorId": d[5].lower().replace(" ", "_"), "name": d[5]},
                     "grid": str(DRIVERS.index(d) + 1), "laps": str(LAPS), "status": "Finished",
-                    "Time": {"time": fmt(total[did]) if pos == 1 else f"+{total[did] - total[order[0]]:.3f}"},
+                    "Time": {"millis": str(round(total[did] * 1000)), "time": fmt(total[did]) if pos == 1 else f"+{total[did] - total[order[0]]:.3f}"},
                     "FastestLap": {"rank": "0", "lap": str(laps[did].index(best) + 1), "Time": {"time": fmt(best)}}})
 
 jolpica = {
@@ -75,6 +83,7 @@ jolpica = {
             {"position": r["position"], "points": r["points"], "wins": "1" if r["position"] == "1" else "0",
              "Driver": r["Driver"], "Constructors": [r["Constructor"]]} for r in results]}]}),
 }
+jolpica[f"/{SEASON}/1/driverStandings.json"] = jolpica[f"/{SEASON}/driverStandings.json"]
 team_pts = {}
 for r in results:
     team_pts[r["Constructor"]["name"]] = team_pts.get(r["Constructor"]["name"], 0) + int(r["points"])
@@ -92,7 +101,8 @@ openf1 = {
     "/sessions": [{"session_key": SESSION, "session_name": "Race", "year": 2024,
                    "date_start": RACE_DATE + "T15:00:00+00:00", "country_name": "Testland"}],
     "/drivers": [{"session_key": SESSION, "driver_number": int(d[2]), "name_acronym": d[1],
-                  "full_name": f"{d[3]} {d[4]}".upper(), "team_name": d[5]} for d in DRIVERS],
+                  "full_name": f"{d[3]} {d[4]}".upper(), "team_name": d[5],
+                  "team_colour": {"Team Alpha": "E8002D", "Team Bravo": "27F4D2", "Team Charlie": "FF8000"}[d[5]]} for d in DRIVERS],
     "/stints": [], "/laps": [], "/car_data": [],
 }
 for d in DRIVERS:
@@ -101,26 +111,47 @@ for d in DRIVERS:
         {"session_key": SESSION, "driver_number": n, "stint_number": 1, "lap_start": 1, "lap_end": p,
          "compound": "MEDIUM", "tyre_age_at_start": 0},
         {"session_key": SESSION, "driver_number": n, "stint_number": 2, "lap_start": p + 1, "lap_end": LAPS,
-         "compound": "HARD" if n % 2 else "SOFT", "tyre_age_at_start": 0}]
-# lap 5 telemetry for drivers 1 and 2, 4 Hz synthetic trace
-for n in (1, 2):
-    did = DRIVERS[n - 1][0]
-    start_s = 300 + 92 * 4
-    dur = laps[did][4]
-    openf1["/laps"].append({"session_key": SESSION, "driver_number": n, "lap_number": 5,
-                            "date_start": f"{RACE_DATE}T15:{start_s // 60:02d}:{start_s % 60:02d}.000000+00:00",
-                            "lap_duration": dur})
-    for i in range(int(dur * 4)):
-        t = i / 4
-        phase = (t / dur) * 2 * math.pi * 6  # six braking zones
-        speed = 210 + 95 * math.sin(phase) + (n - 1) * 3
-        throttle = max(0, min(100, int(60 + 60 * math.sin(phase))))
-        brake = 100 if math.sin(phase) < -0.85 else 0
-        gear = max(2, min(8, int(2 + (speed - 100) / 30)))
-        sec = start_s + t
-        openf1["/car_data"].append({"session_key": SESSION, "driver_number": n,
-                                    "date": f"{RACE_DATE}T15:{int(sec // 60):02d}:{sec % 60:09.6f}+00:00",
-                                    "speed": round(speed), "throttle": throttle, "brake": brake, "n_gear": gear})
+         "compound": second[d[0]], "tyre_age_at_start": 0}]
+# OpenF1 laps for every car and lap (start times accumulate from 15:00:00), car_data for lap 5 of cars 1-2
+for d in DRIVERS:
+    n_car, start = int(d[2]), 15 * 3600.0
+    for n, dur in enumerate(laps[d[0]], 1):
+        openf1["/laps"].append({"session_key": SESSION, "driver_number": n_car, "lap_number": n,
+                                "date_start": f"{RACE_DATE}T{int(start // 3600):02d}:{int(start % 3600 // 60):02d}:{start % 60:09.6f}+00:00",
+                                "lap_duration": dur, "is_pit_out_lap": n == pit_lap[d[0]] + 1})
+        if n == 5 and n_car in (1, 2):
+            for i in range(int(dur * 4)):
+                t = i / 4
+                phase = (t / dur) * 2 * math.pi * 6  # six braking zones
+                speed = 210 + 95 * math.sin(phase) + (n_car - 1) * 3
+                sec = start + t
+                openf1["/car_data"].append({
+                    "session_key": SESSION, "driver_number": n_car,
+                    "date": f"{RACE_DATE}T{int(sec // 3600):02d}:{int(sec % 3600 // 60):02d}:{sec % 60:09.6f}+00:00",
+                    "speed": round(speed), "throttle": max(0, min(100, int(60 + 60 * math.sin(phase)))),
+                    "brake": 100 if math.sin(phase) < -0.85 else 0,
+                    "n_gear": max(2, min(8, int(2 + (speed - 100) / 30)))})
+        start += dur
+
+# OpenF1 location: a synthetic kidney-shaped loop for every lap of car 1 (any lap can be traced)
+openf1["/location"] = []
+start = 15 * 3600.0
+for n, dur in enumerate(laps["test_alpha"], 1):
+    for i in range(int(dur * 3)):
+        a = 2 * math.pi * i / (dur * 3)
+        x = 4000 * math.cos(a) + 900 * math.cos(3 * a)
+        y = 2200 * math.sin(a) - 600 * math.sin(2 * a)
+        sec = start + i / 3
+        openf1["/location"].append({"session_key": SESSION, "driver_number": 1, "x": round(x), "y": round(y), "z": 0,
+                                    "date": f"{RACE_DATE}T{int(sec // 3600):02d}:{int(sec % 3600 // 60):02d}:{sec % 60:09.6f}+00:00"})
+    start += dur
+# Race control: a safety car laps 6-7, sector yellow on lap 12 (ignored), chequered flag on the last lap
+openf1["/race_control"] = [
+    {"session_key": SESSION, "lap_number": 1, "category": "Flag", "flag": "GREEN", "scope": "Track", "message": "GREEN LIGHT - PIT EXIT OPEN", "date": RACE_DATE + "T15:00:00+00:00"},
+    {"session_key": SESSION, "lap_number": 6, "category": "SafetyCar", "flag": None, "scope": None, "message": "SAFETY CAR DEPLOYED", "date": RACE_DATE + "T15:08:00+00:00"},
+    {"session_key": SESSION, "lap_number": 8, "category": "SafetyCar", "flag": None, "scope": None, "message": "SAFETY CAR IN THIS LAP", "date": RACE_DATE + "T15:11:00+00:00"},
+    {"session_key": SESSION, "lap_number": 12, "category": "Flag", "flag": "YELLOW", "scope": "Sector", "message": "YELLOW IN TRACK SECTOR 7", "date": RACE_DATE + "T15:18:00+00:00"},
+    {"session_key": SESSION, "lap_number": LAPS, "category": "Flag", "flag": "CHEQUERED", "scope": "Track", "message": "CHEQUERED FLAG", "date": RACE_DATE + "T15:31:00+00:00"}]
 
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "synthetic.json")
 with open(out, "w", encoding="utf-8") as fh:

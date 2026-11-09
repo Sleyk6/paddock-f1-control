@@ -1,10 +1,12 @@
 """Turns raw Jolpica / OpenF1 responses into small, UI-ready structures."""
 from __future__ import annotations
 
+import re
 import statistics
 from datetime import datetime, timedelta, timezone
 
 from .sources import SourceError, utc_now_iso
+from . import strategy as strat
 
 OPENF1_FIRST_SEASON = 2023  # OpenF1 historical coverage starts with the 2023 season
 
@@ -79,7 +81,8 @@ class F1Service:
                   "circuit": r["Circuit"]["circuitName"],
                   "locality": r["Circuit"]["Location"].get("locality"),
                   "country": r["Circuit"]["Location"].get("country"),
-                  "date": r["date"], "time": r.get("time")}
+                  "date": r["date"], "time": r.get("time"), "circuit_id": r["Circuit"].get("circuitId"),
+                  "sprint": bool(r.get("Sprint"))}
                  for r in env["data"]["MRData"]["RaceTable"]["Races"]]
         return self._wrap(season, [env], {"season": season, "races": races})
 
@@ -121,7 +124,21 @@ class F1Service:
                          "time": (r.get("Time") or {}).get("time"), "points": float(r.get("points") or 0),
                          "fastest_lap": (fl.get("Time") or {}).get("time"),
                          "fastest_lap_rank": fl.get("rank")})
-        return self._wrap(season, [env], {"season": season, "round": rnd, "race": race["raceName"],
+        envs, colours = [env], {}
+        if season >= OPENF1_FIRST_SEASON:  # optional: team colours for driver cards
+            try:
+                session, s_env = self._openf1_session(season, race["date"])
+                if session:
+                    d_env = self.openf1.get("/drivers", [("session_key", "=", str(session["session_key"]))],
+                                            ttl=self._ttl(season))
+                    envs += [s_env, d_env]
+                    colours = {str(d["driver_number"]): "#" + d["team_colour"] for d in d_env["data"]
+                               if re.fullmatch(r"[0-9A-Fa-f]{6}", str(d.get("team_colour") or ""))}
+            except SourceError:
+                pass
+        for row in rows:
+            row["team_colour"] = colours.get(str(row["number"]))
+        return self._wrap(season, envs, {"season": season, "round": rnd, "race": race["raceName"],
                                           "date": race["date"], "circuit": race["Circuit"]["circuitName"],
                                           "results": rows})
 
@@ -202,6 +219,162 @@ class F1Service:
         return self._wrap(season, envelopes, {"season": season, "round": rnd, "race": race["raceName"],
                                               "finish_order": order, "pit_stops": stops, "stints": stints}, notes)
 
+    # ---- Strategy projection (model) ---------------------------------------
+    def projection(self, season: int, rnd: int, allocation: dict, pit_loss: float | None = None,
+                   fuel_gain: float = 0.055, cliff_factor: float = 2.0) -> dict:
+        if season < OPENF1_FIRST_SEASON:
+            raise SourceError("OpenF1", f"strategy projection needs OpenF1 lap data ({OPENF1_FIRST_SEASON} onward)", 404)
+        race, r_env = self._race_results(season, rnd)
+        session, s_env = self._openf1_session(season, race["date"])
+        if session is None:
+            raise SourceError("OpenF1", "no matching race session for this date", 404)
+        key = str(session["session_key"])
+        ttl = self._ttl(season)
+        l_env = self.openf1.get("/laps", [("session_key", "=", key)], ttl=ttl)
+        st_env = self.openf1.get("/stints", [("session_key", "=", key)], ttl=ttl)
+        stops_races, p_envs = self._jolpica_all(season, f"/{season}/{rnd}/pitstops.json", "PitStops")
+        notes = []
+        durations = [parse_laptime(p.get("duration")) for rr in stops_races for p in rr.get("PitStops", [])]
+        durations = [d for d in durations if d and d < 40]  # drop red-flag / penalty outliers
+        measured_pit = round(statistics.median(durations), 2) if durations else None
+        if pit_loss is None:
+            pit_loss = measured_pit if measured_pit else 22.0
+            if not measured_pit:
+                notes.append("No pit-lane times found; assumed 22 s pit loss.")
+        model = strat.fit_compounds(l_env["data"], st_env["data"], fuel_gain)
+        if len(model) < 2:
+            raise SourceError("OpenF1", "not enough clean dry-tyre laps to fit two compounds (wet race?)", 404)
+        winner = race["Results"][0]
+        race_laps = int(winner.get("laps") or 0)
+        plans = strat.project(model, race_laps, allocation, pit_loss, fuel_gain, cliff_factor)
+        missing = [c for c in strat.DRY if c not in model]
+        if missing:
+            notes.append(f"No usable race data for {', '.join(missing)}: plans using it are not shown.")
+        # validation against what really happened
+        validation = None
+        seq, stops = _strategy_of(st_env["data"], int(winner["number"]))
+        actual_ms = (winner.get("Time") or {}).get("millis")
+        if seq and all(c in model for c in seq) and len(stops) == len(seq) - 1 and actual_ms:
+            pred, _ = strat.simulate(seq, stops, race_laps, model, pit_loss, fuel_gain, cliff_factor)
+            actual = int(actual_ms) / 1000
+            validation = {"driver": winner["Driver"].get("code"), "sequence": list(seq), "pit_laps": list(stops),
+                          "predicted": round(pred, 1), "actual": round(actual, 1),
+                          "error_pct": round((pred - actual) / actual * 100, 2)}
+        used = {}
+        for r in race["Results"][:10]:
+            sq, _ = _strategy_of(st_env["data"], int(r["number"]))
+            if sq:
+                used.setdefault("-".join(c[0] for c in sq), []).append(r["Driver"].get("code"))
+        assumptions = [f"Fuel burn makes each lap {fuel_gain:.3f} s faster", f"Pit loss {pit_loss:.1f} s per stop "
+                       f"({'median pit-lane time this race' if measured_pit and pit_loss == measured_pit else 'set by you'})",
+                       f"Wear is linear; beyond the longest stint seen it grows {cliff_factor:g}x faster",
+                       "Every stint starts on a new set", "No traffic, safety cars, weather, track evolution or driver differences"]
+        return self._wrap(season, [r_env, s_env, l_env, st_env] + p_envs, {
+            "season": season, "round": rnd, "race": race["raceName"], "race_laps": race_laps,
+            "allocation": allocation, "pit_loss": pit_loss, "measured_pit_loss": measured_pit,
+            "compounds": model, "plans": plans, "validation": validation, "used_top10": used,
+            "assumptions": assumptions, "label": "MODEL PROJECTION - an estimate, not official data"}, notes)
+
+    # ---- Points tracker: championship progression round by round -------------
+    def points_tracker(self, season: int, top: int = 10) -> dict:
+        cal = self.calendar(season)["data"]["races"]
+        st = self.standings(season)
+        done = int(st["data"]["after_round"] or 0)
+        envs, series = [], {}
+        for rnd in range(1, done + 1):
+            env = self._jolpica(season, f"/{season}/{rnd}/driverStandings.json")
+            envs.append(env)
+            lists = env["data"]["MRData"]["StandingsTable"]["StandingsLists"]
+            for row in (lists[0]["DriverStandings"] if lists else []):
+                d = row["Driver"]
+                s = series.setdefault(d["driverId"], {"driver_id": d["driverId"], "code": d.get("code"),
+                                                      "name": f'{d["givenName"]} {d["familyName"]}', "points": []})
+                s["points"].append([rnd, float(row["points"])])
+        leaders = [d["driver_id"] for d in st["data"]["drivers"][:top]]
+        remaining = [r for r in cal if r["round"] > done]
+        sprints_left = sum(1 for r in remaining if r.get("sprint"))
+        max_left = 25 * len(remaining) + 8 * sprints_left
+        table = []
+        lead_pts = st["data"]["drivers"][0]["points"] if st["data"]["drivers"] else 0
+        for d in st["data"]["drivers"][:top]:
+            gap = lead_pts - d["points"]
+            table.append({**d, "gap": gap, "can_still_win": gap <= max_left if d["position"] != 1 else True})
+        notes = [f"Max points still available: {max_left} ({len(remaining)} races x 25"
+                 + (f" + {sprints_left} sprints x 8" if sprints_left else "") + "). Ignores tie-breaks."]
+        return self._wrap(season, envs + [], {"season": season, "rounds_done": done, "rounds_total": len(cal),
+                                              "max_points_left": max_left, "table": table,
+                                              "series": [series[i] for i in leaders if i in series]}, notes)
+
+    # ---- Track map + race control (OpenF1 location / race_control) -----------
+    def _past_session_for_circuit(self, season: int, rnd: int):
+        """The race itself if already run, else the latest earlier OpenF1-era race at the same circuit."""
+        today = datetime.now(timezone.utc).date().isoformat()
+        cal = self.calendar(season)["data"]["races"]
+        race = next((r for r in cal if r["round"] == rnd), None)
+        if race is None:
+            raise SourceError("Jolpica-F1", f"no round {rnd} in {season}", 404)
+        for year in range(season, OPENF1_FIRST_SEASON - 1, -1):
+            races = cal if year == season else self.calendar(year)["data"]["races"]
+            match = next((r for r in races if r["circuit_id"] == race["circuit_id"] and r["date"] < today), None)
+            if match:
+                session, _ = self._openf1_session(year, match["date"])
+                if session:
+                    return race, match, year, session
+        return race, None, None, None
+
+    def track_map(self, season: int, rnd: int) -> dict:
+        race, used, year, session = self._past_session_for_circuit(season, rnd)
+        if session is None:
+            raise SourceError("OpenF1", "no position data for this circuit yet (OpenF1 covers 2023 onward)", 404)
+        key = str(session["session_key"])
+        ttl = self._ttl(year)
+        laps = self.openf1.get("/laps", [("session_key", "=", key)], ttl=ttl)["data"]
+        clean = sorted((l for l in laps if l.get("lap_duration") and l.get("date_start") and not l.get("is_pit_out_lap")
+                        and (l.get("lap_number") or 0) > 2), key=lambda l: l["lap_duration"])
+        if not clean:
+            raise SourceError("OpenF1", "no clean lap to trace the track from", 404)
+        # typical racing laps (around median pace); try a few in case one car has no position data
+        try:  # prefer the winner's laps (always tracked); then anyone else
+            winner = int(self._race_results(year, used["round"])[0]["Results"][0]["number"])
+        except (SourceError, KeyError, ValueError, IndexError):
+            winner = None
+        own = [l for l in clean if l["driver_number"] == winner]
+        candidates = own[len(own) // 2:len(own) // 2 + 2] + clean[len(clean) // 2:][:4]
+        pts, loc = [], None
+        for lap in candidates:
+            start = _parse_iso(lap["date_start"])
+            end = start + timedelta(seconds=float(lap["lap_duration"]))
+            loc = self.openf1.get("/location", [("session_key", "=", key), ("driver_number", "=", str(lap["driver_number"])),
+                                                ("date", ">=", _fmt_iso(start)), ("date", "<", _fmt_iso(end))], ttl=ttl)
+            pts = [(p["x"], p["y"]) for p in sorted(loc["data"], key=lambda p: p["date"]) if p.get("x") is not None]
+            if len(pts) >= 20:
+                break
+        if len(pts) < 20:
+            raise SourceError("OpenF1", "not enough position samples for a map", 404)
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+        span = max(max(xs) - min(xs), max(ys) - min(ys)) or 1
+        norm = [[round((x - min(xs)) / span * 100, 1), round((max(ys) - y) / span * 100, 1)] for x, y in downsample(pts, 300)]
+        notes = [] if year == season and used["round"] == rnd else [f"Outline traced from the {year} race at this circuit."]
+        return self._wrap(year, [loc], {"season": season, "round": rnd, "circuit": race["circuit"], "country": race["country"],
+                                        "traced_from": {"season": year, "date": used["date"]},
+                                        "width": round((max(xs) - min(xs)) / span * 100, 1),
+                                        "height": round((max(ys) - min(ys)) / span * 100, 1), "points": norm}, notes)
+
+    def race_control(self, season: int, rnd: int) -> dict:
+        if season < OPENF1_FIRST_SEASON:
+            raise SourceError("OpenF1", f"race control messages cover {OPENF1_FIRST_SEASON} onward", 404)
+        race, r_env = self._race_results(season, rnd)
+        session, s_env = self._openf1_session(season, race["date"])
+        if session is None:
+            raise SourceError("OpenF1", "no matching race session", 404)
+        env = self.openf1.get("/race_control", [("session_key", "=", str(session["session_key"]))], ttl=self._ttl(season))
+        laps = int(race["Results"][0].get("laps") or 0)
+        events = [{"lap": m.get("lap_number"), "flag": m.get("flag"), "category": m.get("category"),
+                   "scope": m.get("scope"), "message": m.get("message"), "date": m.get("date")}
+                  for m in sorted(env["data"], key=lambda m: m.get("date") or "")]
+        return self._wrap(season, [r_env, s_env, env], {"season": season, "round": rnd, "race_laps": laps,
+                                                         "by_lap": track_status_by_lap(events, laps), "events": events[-60:]})
+
     # ---- Telemetry: one lap of car data (OpenF1) ---------------------------
     def telemetry(self, season: int, rnd: int, driver_number: int, lap: int) -> dict:
         if season < OPENF1_FIRST_SEASON:
@@ -227,10 +400,45 @@ class F1Service:
             points.append({"t": round(t, 2), "speed": row.get("speed"), "throttle": row.get("throttle"),
                            "brake": row.get("brake"), "gear": row.get("n_gear")})
         points.sort(key=lambda p: p["t"])
+        if not points:
+            raise SourceError("OpenF1", f"no car data recorded for car {driver_number} on lap {lap}; try another lap", 404)
         return self._wrap(season, [r_env, s_env, l_env, c_env], {
             "season": season, "round": rnd, "race": race["raceName"], "driver_number": driver_number,
             "lap": lap, "lap_time": lap_row.get("lap_duration"), "samples": len(points),
             "points": downsample(points)})
+
+
+def track_status_by_lap(events: list, laps: int) -> list:
+    """Whole-track status per lap from race-control messages: GREEN, YELLOW, VSC, SC, RED, CHEQUERED.
+    Local (sector) yellows are ignored; only track-wide states change the light."""
+    status, out, by_lap = "GREEN", [], {}
+    for e in events:
+        if e.get("lap") is not None:
+            by_lap.setdefault(int(e["lap"]), []).append(e)
+    for lap in range(1, laps + 1):
+        for e in by_lap.get(lap, []):
+            msg, flag, cat = str(e.get("message") or "").upper(), str(e.get("flag") or "").upper(), str(e.get("category") or "")
+            if flag == "RED":
+                status = "RED"
+            elif flag == "CHEQUERED":
+                status = "CHEQUERED"
+            elif "VIRTUAL SAFETY CAR DEPLOYED" in msg or "VSC DEPLOYED" in msg:
+                status = "VSC"
+            elif cat == "SafetyCar" and "DEPLOYED" in msg:
+                status = "SC"
+            elif "ENDING" in msg or "IN THIS LAP" in msg or flag in ("GREEN", "CLEAR") and e.get("scope") == "Track":
+                status = "GREEN"
+            elif flag in ("YELLOW", "DOUBLE YELLOW") and e.get("scope") == "Track":
+                status = "YELLOW"
+        out.append(status)
+    return out
+
+
+def _strategy_of(stints: list, number: int) -> tuple[tuple, tuple]:
+    own = sorted((s for s in stints if s.get("driver_number") == number), key=lambda s: s.get("stint_number") or 0)
+    seq = tuple(str(s.get("compound") or "?").upper() for s in own)
+    stops = tuple(s["lap_end"] for s in own[:-1] if s.get("lap_end"))
+    return seq, stops
 
 
 def _parse_iso(text: str) -> datetime:

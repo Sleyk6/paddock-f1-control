@@ -10,20 +10,27 @@
 <div id="fixture-banner" class="banner hidden" role="alert">
   TEST FIXTURE MODE: synthetic, invented data for testing. Not real Formula 1 results.
 </div>
+<div class="clocks" aria-label="Clocks"><span><b>ZULU</b> <span id="clkZ">--:--:--</span></span><span><b>LOCAL</b> <span id="clkL">--:--:--</span></span><span><b>DC</b> <span id="clkD">--:--:--</span></span></div>
 <header class="top">
-  <div class="brand"><span class="mark"></span><div><h1>PADDOCK F1 CONTROL</h1><p class="sub">Personal race data dashboard</p></div></div>
+  <div class="brand"><span class="mark"></span><div><h1>PADDOCK <em>F1</em> CONTROL</h1><p class="sub">Race data · telemetry · strategy</p></div></div>
   <form class="controls" id="controls">
-    <label>Season <input id="season" type="number" min="1950" max="2100" value="2024"></label>
+    <label>Season <input id="season" type="number" min="1950" max="2100" value=""></label>
     <label>Race <select id="round"></select></label>
     <button type="submit">Load</button>
   </form>
 </header>
+<section class="hero" aria-live="polite">
+  <div class="hero-text"><div class="kicker" id="hero-kicker">Season</div><div class="title"><span id="hero-flag"></span><span id="hero-title">Loading…</span></div><div class="meta" id="hero-meta"></div></div>
+  <div class="hero-map"><div id="trackmap" class="trackmap"></div><div class="beacon" id="beacon"><i class="light"></i><span id="beacon-text">TRACK STATUS · select a lap in Telemetry</span></div><div class="sub" id="map-note"></div></div>
+</section>
 <nav class="tabs" id="tabs" role="tablist">
   <button data-tab="calendar" class="active">Calendar</button>
   <button data-tab="standings">Standings</button>
+  <button data-tab="points">Points</button>
   <button data-tab="results">Results</button>
   <button data-tab="compare">Compare</button>
   <button data-tab="strategy">Strategy</button>
+  <button data-tab="planner">Planner</button>
   <button data-tab="telemetry">Telemetry</button>
 </nav>
 <main>
@@ -35,6 +42,7 @@
   <a href="https://openf1.org">OpenF1</a>. Unofficial personal project, not affiliated with Formula 1 companies.
   <span id="health"></span>
 </footer>
+<script src="flags.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

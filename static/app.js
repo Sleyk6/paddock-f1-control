@@ -2,7 +2,7 @@
 /* PADDOCK F1 CONTROL front end. No external libraries; charts are plain SVG. */
 
 const $ = (sel) => document.querySelector(sel);
-const state = { season: 2024, round: 1, tab: "calendar", results: null, calendar: null };
+const state = { season: new Date().getUTCFullYear(), round: 1, tab: "calendar", results: null, calendar: null };
 
 function esc(v) {
   return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -75,7 +75,7 @@ function lineChart(series, { height = 260, yLabel = "", zero = false, step = fal
       else if (step) d += `H${sx(q[0]).toFixed(1)}V${sy(q[1]).toFixed(1)}`;
       else d += `L${sx(q[0]).toFixed(1)},${sy(q[1]).toFixed(1)}`;
     });
-    out += `<path class="${esc(s.cls)}" d="${d}"/>`;
+    out += `<path class="${esc(s.cls || "line-x")}" d="${d}"${s.color ? ` stroke="${esc(s.color)}"` : ""}/>`;
   }
   out += `<text class="tick" x="4" y="12">${esc(yLabel)}</text></svg>`;
   return out;
@@ -126,10 +126,25 @@ const views = {
     const c = r.data.constructors.map((x) => `<tr class="pos${x.position}"><td class="num">${x.position}</td><td>${esc(x.team)}</td><td class="num">${x.wins}</td><td class="num">${x.points}</td></tr>`).join("");
     return [r.meta, `<div class="grid2"><div class="card"><h2>Drivers · after round ${esc(r.data.after_round)}</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Wins</th><th class="num">Pts</th></tr></thead><tbody>${d}</tbody></table></div></div><div class="card"><h2>Constructors</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Wins</th><th class="num">Pts</th></tr></thead><tbody>${c}</tbody></table></div></div></div>`];
   },
+  async points() {
+    const r = await api("points", { season: state.season });
+    const d = r.data;
+    const pal = ["#ff2a3d", "#39d5ff", "#ffc24a", "#3ff0a8", "#b98cff", "#ff8a3d", "#f2f5fa", "#5b9bd5", "#ff6fb5", "#9be15d"];
+    const series = d.series.map((s, i) => ({ color: pal[i % pal.length], points: s.points }));
+    const rows = d.table.map((x, i) => `<tr class="pos${x.position}"><td class="num">${x.position}</td><td class="drv"><i class="sw" data-c="${i}"></i>${esc(x.name)} <span class="sub">${esc(x.code || "")}</span></td><td>${esc(x.team)}</td><td class="num">${x.points}</td><td class="num">${x.position === 1 ? "leader" : "-" + x.gap}</td><td>${x.can_still_win ? '<span class="ok">in contention</span>' : '<span class="sub">out of reach</span>'}</td></tr>`).join("");
+    return [r.meta, `<div class="kpis bigkpi"><div class="kpi a"><div class="v">${esc(d.table[0]?.code || "–")} ${esc(d.table[0]?.points ?? "")}</div><div class="l">Championship leader</div></div>
+        <div class="kpi"><div class="v">${d.rounds_done}/${d.rounds_total}</div><div class="l">Rounds complete</div></div>
+        <div class="kpi b"><div class="v">${d.max_points_left}</div><div class="l">Max points still available</div></div></div>
+      <div class="card"><h2>Points progression · top ${d.series.length}</h2>${lineChart(series, { yLabel: "points", yMin: 0 })}
+        <div class="legend">${d.series.map((s, i) => `<span><i class="sw" data-c="${i}"></i>${esc(s.code || s.driver_id)}</span>`).join("")}</div></div>
+      <div class="card"><h2>Title fight</h2>${notes(r.meta)}<div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Pts</th><th class="num">Gap</th><th>Mathematically</th></tr></thead><tbody>${rows}</tbody></table></div></div>`, paintSwatches];
+  },
   async results() {
     const r = await ensureResults();
-    const rows = r.data.results.map((x) => `<tr class="pos${esc(x.position)}"><td class="num">${esc(x.position)}</td><td>${esc(x.name)} <span class="sub">#${esc(x.number)}</span></td><td>${esc(x.team)}</td><td class="num">${x.grid}</td><td class="num">${x.laps}</td><td>${esc(x.time || x.status)}</td><td>${esc(x.fastest_lap || "–")}</td><td class="num">${x.points}</td></tr>`).join("");
-    return [r.meta, `<div class="card"><h2>${esc(r.data.race)} · ${esc(r.data.circuit)} · ${esc(r.data.date)}</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Grid</th><th class="num">Laps</th><th>Time / status</th><th>Fastest lap</th><th class="num">Pts</th></tr></thead><tbody>${rows}</tbody></table></div></div>`];
+    const res = r.data.results;
+    const podium = res.slice(0, 3).map((x, i) => `<div class="dcard p${i + 1}">${plate(x, 64)}<div><div class="dpos">P${esc(x.position)}</div><div class="dname">${esc(x.name)}</div><div class="sub">${esc(x.team)} · ${esc(x.time || x.status)}</div></div></div>`).join("");
+    const rows = res.map((x) => `<tr class="pos${esc(x.position)}"><td class="num">${esc(x.position)}</td><td class="drv">${plate(x, 26)}<span>${esc(x.name)}</span></td><td>${esc(x.team)}</td><td class="num">${x.grid}</td><td class="num">${x.laps}</td><td>${esc(x.time || x.status)}</td><td>${esc(x.fastest_lap || "–")}</td><td class="num">${x.points}</td></tr>`).join("");
+    return [r.meta, `<div class="podium">${podium}</div><div class="card"><h2>Classification · ${esc(r.data.circuit)} · ${esc(r.data.date)}</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Grid</th><th class="num">Laps</th><th>Time / status</th><th>Fastest lap</th><th class="num">Pts</th></tr></thead><tbody>${rows}</tbody></table></div></div>`];
   },
   async compare() {
     const res = await ensureResults();
@@ -157,6 +172,43 @@ const views = {
       <div class="legend"><span>Bars are coloured by compound: soft, medium, hard, intermediate, wet. Rows follow finishing order.</span></div></div>
       <div class="card"><h2>Pit stops (${r.data.pit_stops.length})</h2><div class="tablewrap"><table><thead><tr><th>Driver</th><th class="num">Stop</th><th class="num">Lap</th><th class="num">Time in pit lane (s)</th></tr></thead><tbody>${stops || '<tr><td colspan="4">No pit stop data.</td></tr>'}</tbody></table></div></div>`];
   },
+  async planner() {
+    const a = state.alloc || { soft: 2, medium: 2, hard: 2, pit_loss: "" };
+    const form = `<div class="pickers">
+      <label>Soft sets <input id="aS" type="number" min="0" max="8" value="${esc(a.soft)}"></label>
+      <label>Medium sets <input id="aM" type="number" min="0" max="8" value="${esc(a.medium)}"></label>
+      <label>Hard sets <input id="aH" type="number" min="0" max="8" value="${esc(a.hard)}"></label>
+      <label>Pit loss s (blank = measured) <input id="aP" type="number" min="10" max="60" value="${esc(a.pit_loss)}" placeholder="auto"></label>
+      <button id="runPlan" type="button">Run projection</button></div>
+      <p class="sub">Sets left for the race. A standard weekend allocation is 13 dry sets (8 soft, 3 medium, 2 hard); most are used before Sunday. Dry races must use two different compounds.</p>`;
+    let r;
+    try {
+      const params = { season: state.season, round: state.round, soft: a.soft, medium: a.medium, hard: a.hard };
+      if (a.pit_loss) params.pit_loss = a.pit_loss;
+      r = await api("projection", params);
+    } catch (e) {
+      return [null, `<div class="card"><h2>Strategy planner</h2>${form}<div class="error">${esc(e.message)}</div></div>`, bindPlan];
+    }
+    const d = r.data, best = d.plans[0];
+    const comps = Object.entries(d.compounds).sort((x, y) => x[1].offset - y[1].offset);
+    const compRows = comps.map(([c, m]) => `<tr><td><svg class="tyre" viewBox="0 0 20 20" aria-hidden="true"><circle class="c-${esc(c)}" cx="10" cy="10" r="8"/><circle cx="10" cy="10" r="4.5" fill="#05070d"/></svg>${esc(c)}</td><td class="num">+${m.offset.toFixed(3)}</td><td class="num">${m.deg.toFixed(3)}</td><td class="num">${m.max_life_seen}</td><td class="num">${m.stints} / ${m.laps}</td></tr>`).join("");
+    const planRows = d.plans.map((p, i) => `<tr class="${i === 0 ? "pos1" : ""}"><td class="num">${i + 1}</td><td>${planBar(p, d.race_laps)}</td><td>${p.stops}-stop</td><td>${p.pit_laps.map((l) => "L" + l).join(", ")}</td><td class="num">${i === 0 ? "fastest" : "+" + p.delta.toFixed(1) + " s"}</td></tr>`).join("");
+    const v = d.validation;
+    const used = Object.entries(d.used_top10).map(([k, v2]) => `<li><b>${esc(k)}</b> · ${esc(v2.join(", "))}</li>`).join("");
+    const html = `<div class="card model"><h2>Strategy planner · ${esc(d.race)} · ${esc(d.race_laps)} laps</h2>${form}
+        <div class="modeltag">${esc(d.label)}</div>${notes(r.meta)}</div>
+      ${best ? `<div class="kpis bigkpi"><div class="kpi a"><div class="v">${esc(best.sequence.map((c) => c[0]).join(" → "))}</div><div class="l">Projected fastest · pit lap ${esc(best.pit_laps.join(" & "))}</div></div>
+        <div class="kpi"><div class="v">${esc(d.pit_loss.toFixed(1))} s</div><div class="l">Pit loss per stop${d.measured_pit_loss ? " · measured" : ""}</div></div>
+        ${v ? `<div class="kpi b"><div class="v">${v.error_pct > 0 ? "+" : ""}${esc(v.error_pct)}%</div><div class="l">Model vs ${esc(v.driver)}'s real race time</div></div>` : ""}</div>` : ""}
+      <div class="card"><h2>Ranked plans (best pit laps found for each)</h2><div class="tablewrap"><table><thead><tr><th class="num">#</th><th>Stints</th><th>Type</th><th>Pit</th><th class="num">vs best</th></tr></thead><tbody>${planRows || '<tr><td colspan="5">No legal plan with this allocation.</td></tr>'}</tbody></table></div></div>
+      <div class="card"><h2>Projected lap times · top 3 plans</h2>${lineChart(d.plans.slice(0, 3).map((p, i) => ({ cls: ["line-a", "line-b", "line-c"][i], points: p.trace.map((t, j) => [j + 1, t]) })), { yLabel: "lap s (no pit loss)" })}
+        <div class="legend">${d.plans.slice(0, 3).map((p, i) => `<span><i class="sw ${["a", "b", "c"][i]}"></i>${esc(p.sequence.join("-"))}</span>`).join("")}</div></div>
+      <div class="grid2"><div class="card"><h2>Tyre model fitted from this race</h2><div class="tablewrap"><table><thead><tr><th>Compound</th><th class="num">Pace gap s</th><th class="num">Wear s/lap</th><th class="num">Longest stint seen</th><th class="num">Stints / laps</th></tr></thead><tbody>${compRows}</tbody></table></div></div>
+      <div class="card"><h2>Reality check</h2>${v ? `<p>${esc(v.driver)} ran <b>${esc(v.sequence.join(" → "))}</b>, pitting lap ${esc(v.pit_laps.join(" & "))}. Model: ${fmtTime(v.predicted)} · real: ${fmtTime(v.actual)}.</p>` : "<p class=\"sub\">Winner's strategy could not be checked.</p>"}
+        <h2>What the top 10 actually ran</h2><ul class="plain">${used}</ul>
+        <h2>Assumptions</h2><ul class="plain">${d.assumptions.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div>`;
+    return [r.meta, html, bindPlan];
+  },
   async telemetry() {
     const res = await ensureResults();
     const list = res.data.results;
@@ -171,18 +223,55 @@ const views = {
     }
     const pts = r.data.points;
     const chart = (key, label, opt = {}) => `<div class="card"><h2>${label}</h2>${lineChart([{ cls: "line-a", points: pts.map((p) => [p.t, p[key]]) }], { height: 170, yLabel: label, ...opt })}</div>`;
-    return [r.meta, `<div class="card"><h2>Telemetry · car #${esc(r.data.driver_number)} · lap ${esc(r.data.lap)} · ${fmtTime(r.data.lap_time)} · ${esc(r.data.samples)} samples</h2>${pick}<p class="sub">x axis: seconds into the lap. Car data from OpenF1 (about 3.7 samples per second).</p></div>
+    return [r.meta, `<div class="card"><h2>Telemetry · car #${esc(r.data.driver_number)} · lap ${esc(r.data.lap)} · ${fmtTime(r.data.lap_time)} · ${esc(r.data.samples)} samples</h2>${pick}<p class="sub">x axis: seconds into the lap. Car data from OpenF1 (about 3.7 samples per second).</p><div class="flaglabel">Track status by lap (race control, replay)</div><div id="flagstrip" class="flagstrip"></div></div>
       ${chart("speed", "Speed km/h")}${chart("throttle", "Throttle %", { yMin: 0, yMax: 100 })}${chart("brake", "Brake", { yMin: 0, yMax: 100, step: true })}${chart("gear", "Gear", { yMin: 0, yMax: 8, step: true })}`, bindTel];
   },
 };
 
+
+function plate(x, size) {
+  const col = /^#[0-9A-Fa-f]{6}$/.test(x.team_colour || "") ? x.team_colour : "#3a4660";
+  return `<svg class="plate" width="${size}" height="${size}" viewBox="0 0 40 40" role="img" aria-label="Car ${esc(x.number)}"><polygon points="6,2 40,2 34,38 0,38" fill="${col}"/><text x="20" y="26" text-anchor="middle" class="plate-n">${esc(x.number)}</text></svg>`;
+}
+
+function planBar(p, laps) {
+  const W = 300, H = 16;
+  return `<svg class="planbar" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(p.sequence.join(" then "))}">${p.stints.map((s) => `<rect class="c-${esc(s.compound)}" x="${((s.from - 1) / laps) * W + 1}" y="1" width="${Math.max(2, (s.laps / laps) * W - 2)}" height="${H - 2}" rx="2"><title>${esc(s.compound)} laps ${s.from}–${s.to}</title></rect><text x="${((s.from - 1) / laps) * W + 6}" y="12" class="planlbl">${esc(s.compound[0])}${s.laps}</text>`).join("")}</svg>`;
+}
+
+function bindPlan() {
+  $("#runPlan").onclick = () => {
+    state.alloc = { soft: $("#aS").value || 0, medium: $("#aM").value || 0, hard: $("#aH").value || 0, pit_loss: $("#aP").value };
+    show();
+  };
+}
+
+function paintSwatches() {
+  const pal = ["#ff2a3d", "#39d5ff", "#ffc24a", "#3ff0a8", "#b98cff", "#ff8a3d", "#f2f5fa", "#5b9bd5", "#ff6fb5", "#9be15d"];
+  document.querySelectorAll(".sw[data-c]").forEach((el) => { el.style.background = pal[+el.dataset.c % pal.length]; });
+}
+
+async function updateStatusForLap(lap) {
+  try {
+    const key = `${state.season}/${state.round}`;
+    if (!state.rc || state.rc.key !== key) state.rc = { key, body: await api("racecontrol", { season: state.season, round: state.round }) };
+    const by = state.rc.body.data.by_lap;
+    state.status = { lap, status: by[Math.min(lap, by.length) - 1] || "GREEN", by };
+  } catch { state.status = null; }
+  setBeacon(state.status);
+  const strip = $("#flagstrip");
+  if (strip && state.status) strip.innerHTML = state.status.by.map((s, i) => `<i class="fs st-${s}${i + 1 === +lap ? " cur" : ""}" title="Lap ${i + 1}: ${STATUS[s] || s}"></i>`).join("");
+}
+
 function bindTel() {
+  updateStatusForLap(+(state.telLap || 5));
   $("#telGo").onclick = () => { state.telDriver = $("#telD").value; state.telLap = $("#telL").value; show(); };
 }
 
 async function show() {
   const view = $("#view");
-  view.innerHTML = `<p class="loading">Loading ${esc(state.tab)}…</p>`;
+  view.innerHTML = `<p class="loading">Acquiring ${esc(state.tab)} data</p>`;
+  setHero();
   try {
     const [meta, html, after] = await views[state.tab]();
     renderStatus(meta);
@@ -194,10 +283,52 @@ async function show() {
   }
 }
 
+function setHero() {
+  const opt = $("#round").selectedOptions[0];
+  const race = state.calendar?.races?.find((r) => r.round === state.round);
+  $("#hero-kicker").textContent = `Season ${state.season} · Round ${state.round}${race?.sprint ? " · Sprint weekend" : ""}`;
+  $("#hero-title").textContent = race ? race.name : (opt ? opt.textContent.replace(/^\d+\.\s*/, "") : `Season ${state.season}`);
+  $("#hero-flag").innerHTML = race ? flagSvg(race.country, 44) : "";
+  $("#hero-meta").textContent = race ? `${race.circuit} · ${race.locality}, ${race.country} · ${race.date}` : "";
+  const key = `${state.season}/${state.round}`;
+  if (state.mapKey !== key) { state.mapKey = key; state.status = null; loadMap(key); }
+  setBeacon(state.status);
+}
+
+async function loadMap(key) {
+  $("#trackmap").innerHTML = `<p class="loading">Tracing circuit</p>`;
+  $("#map-note").textContent = "";
+  try {
+    const m = await api("trackmap", { season: state.season, round: state.round });
+    if (state.mapKey !== key) return;
+    const pts = m.data.points.map((p) => p.join(",")).join(" ");
+    $("#trackmap").innerHTML = `<svg viewBox="-4 -4 ${m.data.width + 8} ${m.data.height + 8}" role="img" aria-label="Track map of ${esc(m.data.circuit)}"><polygon class="track-glow" points="${pts}"/><polygon class="track" points="${pts}"/><circle class="sf" cx="${m.data.points[0][0]}" cy="${m.data.points[0][1]}" r="2.2"/></svg>`;
+    $("#map-note").textContent = (m.meta.notes[0] || `Traced from car position data, ${m.data.traced_from.date}`) + " · OpenF1";
+  } catch (e) {
+    if (state.mapKey === key) { $("#trackmap").innerHTML = ""; $("#map-note").textContent = "No track map: " + e.message; }
+  }
+}
+
+const STATUS = { GREEN: "Green flag", YELLOW: "Yellow flag", VSC: "Virtual safety car", SC: "Safety car", RED: "Red flag", CHEQUERED: "Chequered flag" };
+function setBeacon(st) {
+  const b = $("#beacon");
+  b.className = "beacon" + (st ? " st-" + st.status : "");
+  $("#beacon-text").textContent = st ? `LAP ${st.lap} · ${STATUS[st.status] || st.status} · replay` : "TRACK STATUS · pick a lap in Telemetry";
+}
+
+function tickClocks() {
+  const now = new Date();
+  const f = (tz) => now.toLocaleTimeString("en-GB", { timeZone: tz, hour12: false });
+  $("#clkZ").textContent = f("UTC") + "Z";
+  $("#clkL").textContent = now.toLocaleTimeString("en-GB", { hour12: false }) + " " + (Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(now).find((p) => p.type === "timeZoneName")?.value || "");
+  $("#clkD").textContent = f("America/New_York") + " " + (Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", timeZoneName: "short" }).formatToParts(now).find((p) => p.type === "timeZoneName")?.value || "ET");
+}
+
 async function loadRounds() {
   const sel = $("#round");
   try {
     const r = await api("calendar", { season: state.season });
+    state.calendar = r.data;
     sel.innerHTML = r.data.races.map((x) => `<option value="${x.round}" ${x.round === state.round ? "selected" : ""}>${x.round}. ${esc(x.name)}</option>`).join("");
     if (!r.data.races.some((x) => x.round === state.round)) state.round = r.data.races[0]?.round || 1;
   } catch {
@@ -206,6 +337,9 @@ async function loadRounds() {
 }
 
 async function init() {
+  $("#season").value = state.season;
+  tickClocks();
+  setInterval(tickClocks, 1000);
   try {
     const h = await api("health");
     if (h.mode === "fixture") $("#fixture-banner").classList.remove("hidden");
@@ -216,7 +350,7 @@ async function init() {
     state.tab = b.dataset.tab; show();
   }));
   $("#season").addEventListener("change", async (e) => { state.season = +e.target.value; state.results = null; await loadRounds(); });
-  $("#round").addEventListener("change", (e) => { state.round = +e.target.value; state.results = null; state.cmpA = state.cmpB = state.telDriver = null; });
+  $("#round").addEventListener("change", (e) => { state.round = +e.target.value; state.results = null; state.cmpA = state.cmpB = state.telDriver = null; setHero(); });
   $("#controls").addEventListener("submit", (e) => { e.preventDefault(); state.season = +$("#season").value; state.round = +$("#round").value; state.results = null; show(); });
   await loadRounds();
   show();

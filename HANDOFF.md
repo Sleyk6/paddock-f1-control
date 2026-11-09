@@ -1,7 +1,9 @@
 # Handoff
 
-**State (2026-11-08):** v0.1.0 built by Claude in a cloud workspace. 22 tests pass. The UI was checked with Playwright in fixture mode, with no console errors and no horizontal scroll at 390 px width.
+**State (2026-11-09):** v0.2.0. 34 tests pass. Every tab was checked with Playwright in fixture mode: no page errors, and no horizontal scroll at 390 px.
 
-**Not verified:** live Jolpica/OpenF1 calls. The build workspace's network allowlist blocked those hosts.
+**Verified on PC:** v0.1.0 ran in live mode on the founder PC (Python 3.14.6) on 2026-11-08, and real data loaded.
 
-**Next action (founder, main PC):** `py --version` (needs 3.10+), then `py -m f1control.server`, open http://127.0.0.1:8301, and load 2024 round 1. Report any red error box.
+**Not verified:** the v0.2 live run on the PC. That covers the projection on real 2026 races, track maps from real OpenF1 location data, and race-control status.
+
+**Next action (founder):** stop and restart `py -m f1control.server`, open http://127.0.0.1:8301, then try Points, Planner, and Telemetry (watch the status light).

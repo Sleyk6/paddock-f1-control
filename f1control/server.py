@@ -22,7 +22,7 @@ from .sources import (JOLPICA_BASE, OPENF1_BASE, DiskCache, FixtureSource, HttpS
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(ROOT, "static")
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 log = logging.getLogger("f1control")
 
 
@@ -52,7 +52,7 @@ def make_app(service: F1Service, mode: str):
     started = time.time()
 
     def route(path: str, q: dict):
-        season = lambda: _int(q, "season", 1950, 2100, 2024)  # noqa: E731
+        season = lambda: _int(q, "season", 1950, 2100, service.current_year)  # noqa: E731
         rnd = lambda: _int(q, "round", 1, 30, 1)  # noqa: E731
         if path == "/api/health":
             return {"status": "ok", "version": VERSION, "mode": mode, "uptime_s": round(time.time() - started),
@@ -68,6 +68,16 @@ def make_app(service: F1Service, mode: str):
             return service.compare(season(), rnd(), _driver(q, "a"), _driver(q, "b"))
         if path == "/api/strategy":
             return service.strategy(season(), rnd())
+        if path == "/api/points":
+            return service.points_tracker(season())
+        if path == "/api/trackmap":
+            return service.track_map(season(), rnd())
+        if path == "/api/racecontrol":
+            return service.race_control(season(), rnd())
+        if path == "/api/projection":
+            alloc = {c: _int(q, c.lower(), 0, 8, d) for c, d in (("SOFT", 2), ("MEDIUM", 2), ("HARD", 2))}
+            pit = _int(q, "pit_loss", 10, 60, 0) or None
+            return service.projection(season(), rnd(), alloc, float(pit) if pit else None)
         if path == "/api/telemetry":
             return service.telemetry(season(), rnd(), _int(q, "driver", 1, 99), _int(q, "lap", 1, 100))
         return None

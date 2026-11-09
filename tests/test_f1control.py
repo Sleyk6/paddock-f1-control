@@ -142,6 +142,79 @@ class ServiceTests(unittest.TestCase):
             shutil.rmtree(d)
 
 
+class StrategyTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.svc, _ = build_service(True, "")
+        cls.d = cls.svc.projection(2024, 1, {"SOFT": 2, "MEDIUM": 2, "HARD": 2})["data"]
+
+    def test_recovers_known_wear_rates(self):
+        truth = {"SOFT": 0.12, "MEDIUM": 0.07, "HARD": 0.04}  # built into the synthetic data
+        for comp, wear in truth.items():
+            self.assertAlmostEqual(self.d["compounds"][comp]["deg"], wear, delta=0.015, msg=comp)
+
+    def test_compound_order_soft_fastest_hard_slowest(self):
+        off = {c: m["offset"] for c, m in self.d["compounds"].items()}
+        self.assertLess(off["SOFT"], off["MEDIUM"])
+        self.assertLess(off["MEDIUM"], off["HARD"])
+
+    def test_plans_are_legal_and_ranked(self):
+        plans = self.d["plans"]
+        self.assertTrue(plans)
+        self.assertEqual(plans[0]["delta"], 0)
+        for p in plans:
+            self.assertGreaterEqual(len(set(p["sequence"])), 2)  # two-compound rule
+            self.assertEqual(sum(s["laps"] for s in p["stints"]), self.d["race_laps"])
+        self.assertEqual([p["total"] for p in plans], sorted(p["total"] for p in plans))
+
+    def test_allocation_limits_plans(self):
+        d = self.svc.projection(2024, 1, {"SOFT": 0, "MEDIUM": 1, "HARD": 1})["data"]
+        self.assertTrue(all(sorted(p["sequence"]) == ["HARD", "MEDIUM"] for p in d["plans"]))
+        none = self.svc.projection(2024, 1, {"SOFT": 0, "MEDIUM": 2, "HARD": 0})["data"]
+        self.assertEqual(none["plans"], [])
+
+    def test_validation_against_real_winner(self):
+        v = self.d["validation"]
+        self.assertIsNotNone(v)
+        self.assertLess(abs(v["error_pct"]), 3)
+        self.assertIn("MODEL PROJECTION", self.d["label"])
+
+    def test_results_have_team_colours(self):
+        rows = self.svc.results(2024, 1)["data"]["results"]
+        self.assertTrue(all(r["team_colour"] and r["team_colour"].startswith("#") for r in rows))
+
+
+class TrackAndPointsTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.svc, _ = build_service(True, "")
+
+    def test_track_map_is_normalised_closed_shape(self):
+        d = self.svc.track_map(2024, 1)["data"]
+        xs = [p[0] for p in d["points"]]
+        ys = [p[1] for p in d["points"]]
+        self.assertGreater(len(d["points"]), 100)
+        self.assertAlmostEqual(max(max(xs), max(ys)), 100, delta=0.5)
+        self.assertGreaterEqual(min(xs + ys), 0)
+
+    def test_future_race_uses_earlier_race_at_same_circuit(self):
+        r = self.svc.track_map(2024, 3)
+        self.assertIn("traced from", r["meta"]["notes"][0])
+
+    def test_track_status_from_race_control(self):
+        by = self.svc.race_control(2024, 1)["data"]["by_lap"]
+        self.assertEqual(by[5:7], ["SC", "SC"])
+        self.assertEqual(by[11], "GREEN")  # sector yellow does not change track status
+        self.assertEqual(by[-1], "CHEQUERED")
+
+    def test_points_tracker(self):
+        d = self.svc.points_tracker(2024)["data"]
+        self.assertEqual(d["rounds_done"], 1)
+        self.assertEqual(d["max_points_left"], 50)  # 2 races left x 25
+        self.assertTrue(d["table"][0]["can_still_win"])
+        self.assertEqual(d["series"][0]["points"], [[1, 25.0]])
+
+
 class ServerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -171,6 +244,16 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("server_ms", json.loads(body)["meta"])
 
+    def test_projection_endpoint(self):
+        status, _, body = self.get("/api/projection?season=2024&round=1&soft=2&medium=2&hard=2&pit_loss=21")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["data"]["pit_loss"], 21.0)
+        self.assertEqual(self.get("/api/projection?season=2024&round=1&soft=99")[0], 400)
+
+    def test_new_endpoints(self):
+        for path in ("/api/points?season=2024", "/api/trackmap?season=2024&round=1", "/api/racecontrol?season=2024&round=1"):
+            self.assertEqual(self.get(path)[0], 200, path)
+
     def test_bad_input_rejected(self):
         self.assertEqual(self.get("/api/results?season=abc")[0], 400)
         self.assertEqual(self.get("/api/compare?a=Robert';DROP&b=x")[0], 400)
@@ -189,7 +272,7 @@ class ServerTests(unittest.TestCase):
         status, headers, body = self.get("/")
         self.assertEqual(status, 200)
         self.assertIn("default-src 'self'", headers["Content-Security-Policy"])
-        self.assertIn(b"PADDOCK F1 CONTROL", body)
+        self.assertIn(b"<title>PADDOCK F1 Control</title>", body)
 
 
 if __name__ == "__main__":
