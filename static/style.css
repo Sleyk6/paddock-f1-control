@@ -250,3 +250,13 @@ ul.feed li { font: 12px var(--mono); }
 /* ---------- v0.5: car tracker ---------- */
 #cars circle { stroke: #05070d; stroke-width: .8; filter: drop-shadow(0 0 2px rgba(255, 255, 255, .6)); }
 .carlbl { fill: #e9eef7; font: 700 4px var(--mono); paint-order: stroke; stroke: #05070d; stroke-width: 1px; }
+
+/* ---------- v0.5.1: tyre icons ---------- */
+svg.tyre { width: auto; height: auto; vertical-align: middle; margin-right: 0; }
+svg.tyre .ring.c-SOFT { stroke: var(--soft); } svg.tyre .ring.c-MEDIUM { stroke: var(--medium); } svg.tyre .ring.c-HARD { stroke: var(--hard); }
+svg.tyre .ring.c-INTERMEDIATE { stroke: var(--inter); } svg.tyre .ring.c-WET { stroke: var(--wet); } svg.tyre .ring.c-UNKNOWN { stroke: var(--dim); }
+.tletter { fill: #e9eef7; font: 700 8px var(--mono); }
+.tyrewrap { display: flex; flex-direction: column; gap: 3px; }
+.tyreicons { display: flex; gap: 6px; align-items: center; }
+.tstint { display: inline-flex; align-items: center; gap: 2px; }
+.tl { font: 11px var(--mono); color: var(--muted); }

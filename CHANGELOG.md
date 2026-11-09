@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.1 (2026-11-09)
+- Tyre icons (original design: tyre with compound-coloured ring and S/M/H/I/W letter) with stint lengths in Results; also in the Planner tyre model table.
+
 ## 0.5.0 (2026-11-09)
 - **Car tracker:** in Live drill, every car is a team-coloured dot with its code, moving around the track map from OpenF1 position data (1 fix per second, smoothed; loaded 2 minutes at a time). Cars in the garage disappear.
 - Live drill can also replay the Race and Sprint.

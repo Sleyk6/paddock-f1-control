@@ -208,7 +208,8 @@ const views = {
     const tyres = (code) => {
       const list = (stints[code] || []).sort((a, b) => a.stint - b.stint);
       if (!list.length) return '<span class="sub">–</span>';
-      return `<svg class="minityres" viewBox="0 0 100 10" role="img" aria-label="${esc(list.map((s) => s.compound).join(", "))}">${list.map((s) => `<rect class="c-${esc(String(s.compound || "UNKNOWN").toUpperCase())}" x="${(((s.lap_start || 1) - 1) / maxLap) * 100}" y="1" width="${Math.max(1.5, (((s.lap_end || s.lap_start || 1) - (s.lap_start || 1) + 1) / maxLap) * 100 - 1)}" height="8" rx="1.5"><title>${esc(s.compound)} L${esc(s.lap_start)}–${esc(s.lap_end)}</title></rect>`).join("")}</svg>`;
+      const icons = list.map((s) => `<span class="tstint">${tyreIcon(s.compound, 26)}<span class="tl">${esc((s.lap_end || 0) - (s.lap_start || 0) + 1)}</span></span>`).join("");
+      return `<div class="tyrewrap"><div class="tyreicons">${icons}</div><svg class="minityres" viewBox="0 0 100 10" role="img" aria-label="${esc(list.map((s) => s.compound).join(", "))}">${list.map((s) => `<rect class="c-${esc(String(s.compound || "UNKNOWN").toUpperCase())}" x="${(((s.lap_start || 1) - 1) / maxLap) * 100}" y="1" width="${Math.max(1.5, (((s.lap_end || s.lap_start || 1) - (s.lap_start || 1) + 1) / maxLap) * 100 - 1)}" height="8" rx="1.5"><title>${esc(s.compound)} L${esc(s.lap_start)}–${esc(s.lap_end)}</title></rect>`).join("")}</svg></div>`;
     };
     const moved = (x) => {
       const fin = parseInt(x.position, 10);
@@ -267,7 +268,7 @@ const views = {
     }
     const d = r.data, best = d.plans[0];
     const comps = Object.entries(d.compounds).sort((x, y) => x[1].offset - y[1].offset);
-    const compRows = comps.map(([c, m]) => `<tr><td><svg class="tyre" viewBox="0 0 20 20" aria-hidden="true"><circle class="c-${esc(c)}" cx="10" cy="10" r="8"/><circle cx="10" cy="10" r="4.5" fill="#05070d"/></svg>${esc(c)}</td><td class="num">+${m.offset.toFixed(3)}</td><td class="num">${m.deg.toFixed(3)}</td><td class="num">${m.max_life_seen}</td><td class="num">${m.stints} / ${m.laps}</td></tr>`).join("");
+    const compRows = comps.map(([c, m]) => `<tr><td>${tyreIcon(c, 22)} ${esc(c)}</td><td class="num">+${m.offset.toFixed(3)}</td><td class="num">${m.deg.toFixed(3)}</td><td class="num">${m.max_life_seen}</td><td class="num">${m.stints} / ${m.laps}</td></tr>`).join("");
     const planRows = d.plans.map((p, i) => `<tr class="${i === 0 ? "pos1" : ""}"><td class="num">${i + 1}</td><td>${planBar(p, d.race_laps)}</td><td>${p.stops}-stop</td><td>${p.pit_laps.map((l) => "L" + l).join(", ")}</td><td class="num">${i === 0 ? "fastest" : "+" + p.delta.toFixed(1) + " s"}</td></tr>`).join("");
     const v = d.validation;
     const used = Object.entries(d.used_top10).map(([k, v2]) => `<li><b>${esc(k)}</b> · ${esc(v2.join(", "))}</li>`).join("");
@@ -304,6 +305,13 @@ const views = {
   },
 };
 
+
+// Original tyre graphic: black tyre, coloured compound ring, letter. Not a reproduction of any brand's design.
+function tyreIcon(compound, size = 20) {
+  const c = String(compound || "UNKNOWN").toUpperCase();
+  const letter = { SOFT: "S", MEDIUM: "M", HARD: "H", INTERMEDIATE: "I", WET: "W" }[c] || "?";
+  return `<svg class="tyre" width="${size}" height="${size}" viewBox="0 0 24 24" role="img" aria-label="${esc(c.toLowerCase())} tyre"><circle cx="12" cy="12" r="11" fill="#0b0d12" stroke="#2a2f3a" stroke-width="1"/><circle class="c-${esc(c)} ring" cx="12" cy="12" r="7.6" fill="none" stroke-width="2.6"/><circle cx="12" cy="12" r="5.6" fill="#161a22"/><text x="12" y="15.4" text-anchor="middle" class="tletter">${letter}</text></svg>`;
+}
 
 function plate(x, size) {
   const col = /^#[0-9A-Fa-f]{6}$/.test(x.team_colour || "") ? x.team_colour : "#3a4660";
