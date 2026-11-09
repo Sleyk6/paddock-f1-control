@@ -32,9 +32,11 @@ def downsample(rows: list, limit: int = 400) -> list:
 
 
 class F1Service:
-    def __init__(self, jolpica, openf1, current_year: int | None = None):
+    def __init__(self, jolpica, openf1, current_year: int | None = None, weather=None, today: str | None = None):
         self.jolpica = jolpica
         self.openf1 = openf1
+        self.weather_src = weather  # Open-Meteo (forecast); optional
+        self.today = today
         self.current_year = current_year or datetime.now(timezone.utc).year
 
     # ---- helpers -------------------------------------------------------
@@ -82,6 +84,7 @@ class F1Service:
                   "locality": r["Circuit"]["Location"].get("locality"),
                   "country": r["Circuit"]["Location"].get("country"),
                   "date": r["date"], "time": r.get("time"), "circuit_id": r["Circuit"].get("circuitId"),
+                  "lat": _float(r["Circuit"]["Location"].get("lat")), "lon": _float(r["Circuit"]["Location"].get("long")),
                   "sprint": bool(r.get("Sprint"))}
                  for r in env["data"]["MRData"]["RaceTable"]["Races"]]
         return self._wrap(season, [env], {"season": season, "races": races})
@@ -305,6 +308,112 @@ class F1Service:
                                               "max_points_left": max_left, "table": table,
                                               "series": [series[i] for i in leaders if i in series]}, notes)
 
+    # ---- Race weekend: practice bests, qualifying, weather ----------------------
+    def _today(self) -> str:
+        return self.today or datetime.now(timezone.utc).date().isoformat()
+
+    def weekend(self, season: int, rnd: int) -> dict:
+        cal = self.calendar(season)["data"]["races"]
+        race = next((r for r in cal if r["round"] == rnd), None)
+        if race is None:
+            raise SourceError("Jolpica-F1", f"no round {rnd} in {season}", 404)
+        envs, notes, sessions = [], [], []
+        # Qualifying (Jolpica) - published after the session
+        quali = []
+        try:
+            q_env = self._jolpica(season, f"/{season}/{rnd}/qualifying.json")
+            envs.append(q_env)
+            races = q_env["data"]["MRData"]["RaceTable"]["Races"]
+            for q in (races[0].get("QualifyingResults", []) if races else []):
+                quali.append({"position": int(q.get("position") or 0), "number": q.get("number"),
+                              "code": q["Driver"].get("code"), "name": f'{q["Driver"]["givenName"]} {q["Driver"]["familyName"]}',
+                              "team": q["Constructor"]["name"], "q1": q.get("Q1"), "q2": q.get("Q2"), "q3": q.get("Q3")})
+        except SourceError as exc:
+            notes.append(f"Qualifying not available: {exc.message}")
+        if not quali:
+            notes.append("No qualifying result published yet.")
+        # Practice and other sessions (OpenF1) - free data arrives after each session
+        if season >= OPENF1_FIRST_SEASON:
+            try:
+                s_env = self.openf1.get("/sessions", [("year", "=", str(season))], ttl=self._ttl(season))
+                envs.append(s_env)
+                start = (datetime.fromisoformat(race["date"]) - timedelta(days=4)).date().isoformat()
+                weekend = [x for x in s_env["data"] if start <= str(x.get("date_start", ""))[:10] <= race["date"]]
+                for x in sorted(weekend, key=lambda x: x.get("date_start", "")):
+                    item = {"name": x.get("session_name"), "start": x.get("date_start"), "end": x.get("date_end"),
+                            "key": x.get("session_key"), "best": []}
+                    if str(x.get("session_name", "")).startswith("Practice") and x.get("date_start", "") < self._today():
+                        try:
+                            l_env = self.openf1.get("/laps", [("session_key", "=", str(x["session_key"]))], ttl=self._ttl(season))
+                            d_env = self.openf1.get("/drivers", [("session_key", "=", str(x["session_key"]))], ttl=self._ttl(season))
+                            envs += [l_env, d_env]
+                            acr = {d["driver_number"]: (d.get("name_acronym"), d.get("team_name"),
+                                                        "#" + d["team_colour"] if re.fullmatch(r"[0-9A-Fa-f]{6}", str(d.get("team_colour") or "")) else None)
+                                   for d in d_env["data"]}
+                            best = {}
+                            for lap in l_env["data"]:
+                                t = lap.get("lap_duration")
+                                if t and not lap.get("is_pit_out_lap") and (lap["driver_number"] not in best or t < best[lap["driver_number"]]):
+                                    best[lap["driver_number"]] = t
+                            order = sorted(best.items(), key=lambda kv: kv[1])
+                            top = order[0][1] if order else None
+                            item["best"] = [{"number": n, "code": acr.get(n, (None,))[0], "team": acr.get(n, (None, None))[1],
+                                             "team_colour": acr.get(n, (None, None, None))[2], "time": t,
+                                             "gap": round(t - top, 3)} for n, t in order]
+                        except SourceError as exc:
+                            item["error"] = exc.message
+                    sessions.append(item)
+            except SourceError as exc:
+                notes.append(f"Session list not available: {exc.message}")
+        return self._wrap(season, envs or [{"source": "Jolpica-F1", "cache": "n/a"}], {
+            "season": season, "round": rnd, "race": race["name"], "date": race["date"],
+            "sessions": sessions, "qualifying": quali}, notes)
+
+    def weather(self, season: int, rnd: int) -> dict:
+        cal = self.calendar(season)["data"]["races"]
+        race = next((r for r in cal if r["round"] == rnd), None)
+        if race is None:
+            raise SourceError("Jolpica-F1", f"no round {rnd} in {season}", 404)
+        out, envs, notes = {"race": race["name"], "date": race["date"], "time": race.get("time"),
+                            "forecast": None, "measured": None}, [], []
+        today = self._today()
+        days_ahead = (datetime.fromisoformat(race["date"]).date() - datetime.fromisoformat(today).date()).days
+        # Forecast: Open-Meteo gives up to 16 days ahead
+        if self.weather_src is None or race.get("lat") is None:
+            notes.append("No forecast source configured.")
+        elif days_ahead > 15:
+            notes.append(f"Forecast opens 16 days before the race ({days_ahead} days to go).")
+        elif days_ahead >= -1:
+            start = (datetime.fromisoformat(race["date"]) - timedelta(days=2)).date().isoformat()
+            env = self.weather_src.get("/forecast", [
+                ("latitude", "=", f'{race["lat"]:.4f}'), ("longitude", "=", f'{race["lon"]:.4f}'),
+                ("hourly", "=", "temperature_2m,precipitation_probability,precipitation,wind_speed_10m,cloud_cover"),
+                ("start_date", "=", start), ("end_date", "=", race["date"]), ("timezone", "=", "UTC")], ttl=1800)
+            envs.append(env)
+            h = env["data"].get("hourly") or {}
+            out["forecast"] = {"time": h.get("time", []), "temp_c": h.get("temperature_2m", []),
+                               "rain_pct": h.get("precipitation_probability", []), "rain_mm": h.get("precipitation", []),
+                               "wind_kmh": h.get("wind_speed_10m", []), "cloud_pct": h.get("cloud_cover", []),
+                               "credit": "Weather data by Open-Meteo.com (CC BY 4.0)"}
+        else:
+            notes.append("Race is in the past: showing measured track weather instead of a forecast.")
+        # Measured at the track (OpenF1 weather station) for finished races
+        if season >= OPENF1_FIRST_SEASON and days_ahead <= 0:
+            try:
+                session, s_env = self._openf1_session(season, race["date"])
+                if session:
+                    w_env = self.openf1.get("/weather", [("session_key", "=", str(session["session_key"]))], ttl=self._ttl(season))
+                    envs += [s_env, w_env]
+                    rows = sorted(w_env["data"], key=lambda w: w.get("date", ""))
+                    if rows:
+                        out["measured"] = {"time": [w.get("date") for w in rows], "air_c": [w.get("air_temperature") for w in rows],
+                                           "track_c": [w.get("track_temperature") for w in rows],
+                                           "rain": any(w.get("rainfall") for w in rows),
+                                           "humidity": [w.get("humidity") for w in rows]}
+            except SourceError as exc:
+                notes.append(f"Measured weather not available: {exc.message}")
+        return self._wrap(season, envs or [{"source": "Open-Meteo", "cache": "n/a"}], out, notes)
+
     # ---- Track map + race control (OpenF1 location / race_control) -----------
     def _past_session_for_circuit(self, season: int, rnd: int):
         """The race itself if already run, else the latest earlier OpenF1-era race at the same circuit."""
@@ -406,6 +515,13 @@ class F1Service:
             "season": season, "round": rnd, "race": race["raceName"], "driver_number": driver_number,
             "lap": lap, "lap_time": lap_row.get("lap_duration"), "samples": len(points),
             "points": downsample(points)})
+
+
+def _float(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
 
 
 def track_status_by_lap(events: list, laps: int) -> list:

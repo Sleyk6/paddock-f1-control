@@ -39,7 +39,7 @@ def fmt(t):
 
 
 circuit = {"circuitId": "test_ring", "circuitName": "Synthetic Test Ring",
-           "Location": {"locality": "Testville", "country": "Testland"}}
+           "Location": {"lat": "10.5", "long": "20.25", "locality": "Testville", "country": "Testland"}}
 races = [{"season": SEASON, "round": str(i + 1), "raceName": f"Test Grand Prix {i + 1}", "Circuit": circuit,
           "date": f"2024-03-{2 + 7 * i:02d}", "time": "15:00:00Z"} for i in range(3)]
 
@@ -157,8 +157,34 @@ openf1["/race_control"] = [
     {"session_key": SESSION, "lap_number": 12, "category": "Flag", "flag": "YELLOW", "scope": "Sector", "message": "YELLOW IN TRACK SECTOR 7", "date": RACE_DATE + "T15:18:00+00:00"},
     {"session_key": SESSION, "lap_number": LAPS, "category": "Flag", "flag": "CHEQUERED", "scope": "Track", "message": "CHEQUERED FLAG", "date": RACE_DATE + "T15:31:00+00:00"}]
 
+# Qualifying (Jolpica) for round 1
+jolpica[f"/{SEASON}/1/qualifying.json"] = mr(len(DRIVERS), RaceTable={"Races": [{**races[0], "QualifyingResults": [
+    {"number": d[2], "position": str(i + 1), "Driver": driver(d), "Constructor": {"name": d[5]},
+     "Q1": fmt(91.4 + i * 0.12), "Q2": fmt(91.1 + i * 0.1) if i < 5 else None, "Q3": fmt(90.8 + i * 0.09) if i < 3 else None}
+    for i, d in enumerate(DRIVERS)]}]})
+# Practice 1 (OpenF1): session 9990 two days before, three timed laps per car
+openf1["/sessions"].insert(0, {"session_key": 9990, "session_name": "Practice 1", "year": 2024,
+                               "date_start": "2024-02-29T11:30:00+00:00", "date_end": "2024-02-29T12:30:00+00:00"})
+for i, d in enumerate(DRIVERS):
+    for k in range(3):
+        openf1["/laps"].append({"session_key": 9990, "driver_number": int(d[2]), "lap_number": k + 1,
+                                "date_start": "2024-02-29T11:40:00+00:00", "lap_duration": round(93.0 + i * 0.2 - k * 0.3, 3),
+                                "is_pit_out_lap": k == 0})
+openf1["/drivers"] += [{**x, "session_key": 9990} for x in openf1["/drivers"] if x["session_key"] == SESSION]
+# Track weather station during the race (OpenF1)
+openf1["/weather"] = [{"session_key": SESSION, "date": f"{RACE_DATE}T15:{m:02d}:00+00:00", "air_temperature": 24 + m / 30,
+                       "track_temperature": 38 + m / 15, "humidity": 55, "rainfall": 0} for m in range(0, 31, 5)]
+# Open-Meteo forecast shape (hourly), 3 days
+hours = [f"2024-02-{29 if h < 24 else 0:02d}T{h % 24:02d}:00" for h in range(0, 72)]
+hours = [(f"2024-02-29T{h:02d}:00" if h < 24 else f"2024-03-0{1 + (h - 24) // 24}T{h % 24:02d}:00") for h in range(72)]
+openmeteo = {"/forecast": {"latitude": 10.5, "longitude": 20.25, "hourly": {
+    "time": hours, "temperature_2m": [round(22 + 6 * math.sin((h % 24 - 9) / 24 * 2 * math.pi), 1) for h in range(72)],
+    "precipitation_probability": [10 if h < 48 else (60 if 60 <= h <= 64 else 20) for h in range(72)],
+    "precipitation": [0.0 if h < 60 or h > 64 else 1.2 for h in range(72)],
+    "wind_speed_10m": [12.0] * 72, "cloud_cover": [30] * 72}}}
+
 out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "synthetic.json")
 with open(out, "w", encoding="utf-8") as fh:
     json.dump({"_warning": "SYNTHETIC TEST DATA - invented names and times, not real F1 data",
-               "jolpica": jolpica, "openf1": openf1}, fh, indent=1)
+               "jolpica": jolpica, "openf1": openf1, "openmeteo": openmeteo}, fh, indent=1)
 print("wrote", out)

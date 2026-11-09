@@ -10,7 +10,12 @@ function esc(v) {
 
 async function api(path, params = {}) {
   const qs = new URLSearchParams(params).toString();
-  const res = await fetch(`/api/${path}${qs ? "?" + qs : ""}`);
+  let res;
+  try {
+    res = await fetch(`/api/${path}${qs ? "?" + qs : ""}`);
+  } catch {
+    throw new Error("F1 CONTROL server is not running. Start it in PowerShell: py -m f1control.server (keep that window open).");
+  }
   const body = await res.json().catch(() => ({ error: "bad response from server" }));
   if (!res.ok) throw new Error(body.source ? `${body.source}: ${body.error}` : body.error);
   return body;
@@ -138,6 +143,40 @@ const views = {
       <div class="card"><h2>Points progression · top ${d.series.length}</h2>${lineChart(series, { yLabel: "points", yMin: 0 })}
         <div class="legend">${d.series.map((s, i) => `<span><i class="sw" data-c="${i}"></i>${esc(s.code || s.driver_id)}</span>`).join("")}</div></div>
       <div class="card"><h2>Title fight</h2>${notes(r.meta)}<div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Pts</th><th class="num">Gap</th><th>Mathematically</th></tr></thead><tbody>${rows}</tbody></table></div></div>`, paintSwatches];
+  },
+  async weekend() {
+    const [wk, wx] = await Promise.all([
+      api("weekend", { season: state.season, round: state.round }),
+      api("weather", { season: state.season, round: state.round }).catch((e) => ({ error: e.message })),
+    ]);
+    const d = wk.data;
+    const t = (v) => (v == null ? "–" : fmtTime(v));
+    const sess = d.sessions.map((x) => `<span class="pill ${x.best.length ? "done" : ""}">${esc(x.name)} · ${esc((x.start || "").slice(5, 16).replace("T", " "))}Z</span>`).join(" ");
+    const prac = d.sessions.filter((x) => x.best.length).map((x) => `<div class="card"><h2>${esc(x.name)} · best laps</h2><div class="tablewrap"><table><thead><tr><th class="num">#</th><th>Driver</th><th>Team</th><th class="num">Best</th><th class="num">Gap</th></tr></thead><tbody>${x.best.slice(0, 20).map((b, i) => `<tr class="pos${i + 1}" data-team="${esc(b.team_colour || "")}"><td class="num">${i + 1}</td><td class="drv">${plate({ number: b.number, team_colour: b.team_colour }, 24)}<span>${esc(b.code || b.number)}</span></td><td>${esc(b.team || "")}</td><td class="num">${t(b.time)}</td><td class="num">${i ? "+" + b.gap.toFixed(3) : "–"}</td></tr>`).join("")}</tbody></table></div></div>`).join("");
+    const q = d.qualifying.length ? `<div class="card"><h2>Qualifying</h2><div class="tablewrap"><table><thead><tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Q1</th><th class="num">Q2</th><th class="num">Q3</th></tr></thead><tbody>${d.qualifying.map((x) => `<tr class="pos${x.position}${x.q3 ? "" : x.q2 ? " q2out" : " q1out"}"><td class="num">${x.position}</td><td>${esc(x.name)} <span class="sub">${esc(x.code || "")}</span></td><td>${esc(x.team)}</td><td class="num">${esc(x.q1 || "–")}</td><td class="num">${esc(x.q2 || "–")}</td><td class="num">${esc(x.q3 || "–")}</td></tr>`).join("")}</tbody></table></div><div class="legend"><span>Dimmed rows were knocked out in Q1 / Q2</span></div></div>` : "";
+    let w = "";
+    if (wx.error) w = `<div class="card"><h2>Weather</h2><div class="error">${esc(wx.error)}</div></div>`;
+    else {
+      const f = wx.data.forecast, m = wx.data.measured;
+      const idx = (arr) => arr.map((v, i) => [i, v]);
+      if (f) {
+        const maxRain = Math.max(0, ...f.rain_pct.filter((v) => v != null));
+        const raceHour = f.time.findIndex((x) => x.startsWith(wx.data.date + "T" + String(wx.data.time || "13:00").slice(0, 2)));
+        w += `<div class="kpis bigkpi"><div class="kpi a"><div class="v">${esc(Math.max(...f.temp_c.filter((v) => v != null)))}°C</div><div class="l">Forecast high · race weekend</div></div>
+          <div class="kpi b"><div class="v">${esc(maxRain)}%</div><div class="l">Highest chance of rain</div></div>
+          ${raceHour >= 0 ? `<div class="kpi"><div class="v">${esc(f.temp_c[raceHour])}°C · ${esc(f.rain_pct[raceHour])}%</div><div class="l">At race start (${esc(f.time[raceHour].slice(11))} UTC)</div></div>` : ""}</div>
+          <div class="card"><h2>Forecast · temperature °C (hourly, UTC, Fri–Sun)</h2>${lineChart([{ cls: "line-a", points: idx(f.temp_c) }], { height: 180, yLabel: "°C" })}
+          <h2>Chance of rain %</h2>${lineChart([{ cls: "line-b", points: idx(f.rain_pct) }], { height: 150, yLabel: "%", yMin: 0, yMax: 100, step: true })}
+          <div class="legend"><span>x axis: hours from Friday 00:00 UTC</span><span>${esc(f.credit)}</span></div></div>`;
+      }
+      if (m) {
+        w += `<div class="card"><h2>Measured at the track during the race · ${m.rain ? '<span class="warn">rain recorded</span>' : "dry"}</h2>${lineChart([{ cls: "line-a", points: idx(m.track_c) }, { cls: "line-b", points: idx(m.air_c) }], { height: 180, yLabel: "°C" })}
+          <div class="legend"><span><i class="sw a"></i>track</span><span><i class="sw b"></i>air</span><span>OpenF1 track weather station, about one reading per minute</span></div></div>`;
+      }
+      w += notes(wx.meta);
+    }
+    return [wk.meta, `<div class="card"><h2>${esc(d.race)} weekend · race ${esc(d.date)}</h2><p>${sess || '<span class="sub">Session list appears once OpenF1 publishes it.</span>'}</p>${notes(wk.meta)}
+      <p class="sub">Free data appears after each session ends. Live timing needs undercut-f1 (pending approval).</p></div>${w}${q}${prac}`, paintTeams];
   },
   async results() {
     const r = await ensureResults();

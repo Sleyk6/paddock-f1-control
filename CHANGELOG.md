@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 (2026-11-09)
+- **Weekend tab:** session list, practice best laps with gaps (OpenF1), qualifying Q1/Q2/Q3 (Jolpica), Open-Meteo weather forecast for the weekend (temperature, rain chance, race-start conditions), measured track and air temperature for finished races.
+- Clear "server is not running" message instead of "Failed to fetch".
+
 ## 0.2.2 (2026-11-09)
 - Auto-retry when a data source rate-limits (429) or hiccups (502-504), honouring Retry-After; OpenF1 spacing 0.6 s.
 

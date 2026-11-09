@@ -17,12 +17,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from .service import F1Service
-from .sources import (JOLPICA_BASE, OPENF1_BASE, DiskCache, FixtureSource, HttpSource, SourceError,
+from .sources import (JOLPICA_BASE, OPENF1_BASE, OPENMETEO_BASE, DiskCache, FixtureSource, HttpSource, SourceError,
                       utc_now_iso)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC = os.path.join(ROOT, "static")
-VERSION = "0.2.2"
+VERSION = "0.3.0"
 log = logging.getLogger("f1control")
 
 
@@ -68,6 +68,10 @@ def make_app(service: F1Service, mode: str):
             return service.compare(season(), rnd(), _driver(q, "a"), _driver(q, "b"))
         if path == "/api/strategy":
             return service.strategy(season(), rnd())
+        if path == "/api/weekend":
+            return service.weekend(season(), rnd())
+        if path == "/api/weather":
+            return service.weather(season(), rnd())
         if path == "/api/points":
             return service.points_tracker(season())
         if path == "/api/trackmap":
@@ -138,12 +142,14 @@ def build_service(fixtures: bool, cache_dir: str) -> tuple[F1Service, str]:
     if fixtures:
         with open(os.path.join(ROOT, "tests", "fixtures", "synthetic.json"), encoding="utf-8") as fh:
             table = json.load(fh)
-        return F1Service(FixtureSource("Jolpica-F1", table["jolpica"]),
-                         FixtureSource("OpenF1", table["openf1"]), current_year=2026), "fixture"
+        return F1Service(FixtureSource("Jolpica-F1", table["jolpica"]), FixtureSource("OpenF1", table["openf1"]),
+                         current_year=2026, weather=FixtureSource("Open-Meteo", table["openmeteo"]),
+                         today="2024-03-01"), "fixture"
     cache = DiskCache(cache_dir)
     # Jolpica allows 4 req/s burst; we stay well under. OpenF1 free tier is also limited.
     return F1Service(HttpSource("Jolpica-F1", JOLPICA_BASE, cache, 0.3),
-                     HttpSource("OpenF1", OPENF1_BASE, cache, 0.6)), "live"
+                     HttpSource("OpenF1", OPENF1_BASE, cache, 0.6),
+                     weather=HttpSource("Open-Meteo", OPENMETEO_BASE, cache, 0.3)), "live"
 
 
 def main(argv=None):

@@ -18,6 +18,7 @@ from typing import Callable, Iterable
 
 JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1"
 OPENF1_BASE = "https://api.openf1.org/v1"
+OPENMETEO_BASE = "https://api.open-meteo.com/v1"
 USER_AGENT = "paddock-f1-control/0.1 (personal, non-commercial)"
 
 # A query parameter is (key, operator, value). Operators: "=", ">=", "<=", ">", "<".

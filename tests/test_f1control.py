@@ -228,6 +228,33 @@ class TrackAndPointsTests(unittest.TestCase):
         self.assertEqual(d["series"][0]["points"], [[1, 25.0]])
 
 
+class WeekendTests(unittest.TestCase):
+    def setUp(self):
+        self.svc, _ = build_service(True, "")
+
+    def test_practice_bests_and_qualifying(self):
+        d = self.svc.weekend(2024, 1)["data"]
+        p1 = next(x for x in d["sessions"] if x["name"] == "Practice 1")
+        self.assertEqual(len(p1["best"]), 6)
+        self.assertEqual(p1["best"][0]["gap"], 0.0)
+        self.assertTrue(all(a["time"] <= b["time"] for a, b in zip(p1["best"], p1["best"][1:])))
+        self.assertEqual(d["qualifying"][0]["q3"], "1:30.800")
+        self.assertIsNone(d["qualifying"][-1]["q2"])
+
+    def test_forecast_before_race(self):
+        r = self.svc.weather(2024, 1)  # fixture 'today' is the day before the race
+        self.assertEqual(len(r["data"]["forecast"]["temp_c"]), 72)
+        self.assertIn("Open-Meteo", r["data"]["forecast"]["credit"])
+
+    def test_measured_after_race_and_too_early(self):
+        self.svc.today = "2024-03-05"
+        r = self.svc.weather(2024, 1)
+        self.assertIsNone(r["data"]["forecast"])
+        self.assertFalse(r["data"]["measured"]["rain"])
+        self.svc.today = "2024-01-01"
+        self.assertIn("16 days", self.svc.weather(2024, 1)["meta"]["notes"][0])
+
+
 class ServerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -264,7 +291,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.get("/api/projection?season=2024&round=1&soft=99")[0], 400)
 
     def test_new_endpoints(self):
-        for path in ("/api/points?season=2024", "/api/trackmap?season=2024&round=1", "/api/racecontrol?season=2024&round=1"):
+        for path in ("/api/weekend?season=2024&round=1", "/api/weather?season=2024&round=1", "/api/points?season=2024", "/api/trackmap?season=2024&round=1", "/api/racecontrol?season=2024&round=1"):
             self.assertEqual(self.get(path)[0], 200, path)
 
     def test_bad_input_rejected(self):

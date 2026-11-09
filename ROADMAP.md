@@ -6,13 +6,13 @@
 
 ## Now: verify on the founder PC
 - [ ] Planner, Results detail and Telemetry status light confirmed on a finished 2026 race (Round 19 or earlier)
-- [ ] Friendlier "server not running" message instead of "Failed to fetch"
+- [x] Friendlier "server not running" message (v0.3.0)
 
 ## Founder requirement (2026-11-08): LIVE WEEKEND MODE
 When a session is live, the page must:
 - [ ] **Flash the track-status colour on the track map** (green / yellow / SC / VSC / red / chequered) as the status changes
-- [ ] **Show practice and qualifying times** (FP1-FP3, sprint qualifying, qualifying: best laps, gaps, sector times)
-- [ ] **Show a weather projection** for the session and race (forecast plus current track and air temperature, rain chance)
+- [x] (post-session, v0.3.0) **Show practice and qualifying times** (FP1-FP3, sprint qualifying, qualifying: best laps, gaps, sector times)
+- [x] (v0.3.0) **Show a weather projection** for the session and race (forecast plus current track and air temperature, rain chance)
 
 Data notes:
 - True real-time status and timing needs paid OpenF1 access (founder decision; costs money). The free tier publishes after each session, so the free build polls and updates as soon as data appears.

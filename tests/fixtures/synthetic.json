@@ -17,6 +17,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -32,6 +34,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -47,6 +51,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -73,6 +79,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -293,6 +301,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -667,6 +677,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -895,6 +907,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -1123,6 +1137,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -1351,6 +1367,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -1579,6 +1597,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -1807,6 +1827,8 @@
         "circuitId": "test_ring",
         "circuitName": "Synthetic Test Ring",
         "Location": {
+         "lat": "10.5",
+         "long": "20.25",
          "locality": "Testville",
          "country": "Testland"
         }
@@ -2019,10 +2041,155 @@
      ]
     }
    }
+  },
+  "/2024/1/qualifying.json": {
+   "MRData": {
+    "limit": "100",
+    "offset": "0",
+    "total": "6",
+    "RaceTable": {
+     "Races": [
+      {
+       "season": "2024",
+       "round": "1",
+       "raceName": "Test Grand Prix 1",
+       "Circuit": {
+        "circuitId": "test_ring",
+        "circuitName": "Synthetic Test Ring",
+        "Location": {
+         "lat": "10.5",
+         "long": "20.25",
+         "locality": "Testville",
+         "country": "Testland"
+        }
+       },
+       "date": "2024-03-02",
+       "time": "15:00:00Z",
+       "QualifyingResults": [
+        {
+         "number": "1",
+         "position": "1",
+         "Driver": {
+          "driverId": "test_alpha",
+          "code": "TDA",
+          "permanentNumber": "1",
+          "givenName": "Test Driver",
+          "familyName": "Alpha",
+          "nationality": "British"
+         },
+         "Constructor": {
+          "name": "Team Alpha"
+         },
+         "Q1": "1:31.400",
+         "Q2": "1:31.100",
+         "Q3": "1:30.800"
+        },
+        {
+         "number": "2",
+         "position": "2",
+         "Driver": {
+          "driverId": "test_bravo",
+          "code": "TDB",
+          "permanentNumber": "2",
+          "givenName": "Test Driver",
+          "familyName": "Bravo",
+          "nationality": "Dutch"
+         },
+         "Constructor": {
+          "name": "Team Alpha"
+         },
+         "Q1": "1:31.520",
+         "Q2": "1:31.200",
+         "Q3": "1:30.890"
+        },
+        {
+         "number": "3",
+         "position": "3",
+         "Driver": {
+          "driverId": "test_charlie",
+          "code": "TDC",
+          "permanentNumber": "3",
+          "givenName": "Test Driver",
+          "familyName": "Charlie",
+          "nationality": "Monegasque"
+         },
+         "Constructor": {
+          "name": "Team Bravo"
+         },
+         "Q1": "1:31.640",
+         "Q2": "1:31.300",
+         "Q3": "1:30.980"
+        },
+        {
+         "number": "4",
+         "position": "4",
+         "Driver": {
+          "driverId": "test_delta",
+          "code": "TDD",
+          "permanentNumber": "4",
+          "givenName": "Test Driver",
+          "familyName": "Delta",
+          "nationality": "Spanish"
+         },
+         "Constructor": {
+          "name": "Team Bravo"
+         },
+         "Q1": "1:31.760",
+         "Q2": "1:31.400",
+         "Q3": null
+        },
+        {
+         "number": "5",
+         "position": "5",
+         "Driver": {
+          "driverId": "test_echo",
+          "code": "TDE",
+          "permanentNumber": "5",
+          "givenName": "Test Driver",
+          "familyName": "Echo",
+          "nationality": "Australian"
+         },
+         "Constructor": {
+          "name": "Team Charlie"
+         },
+         "Q1": "1:31.880",
+         "Q2": "1:31.500",
+         "Q3": null
+        },
+        {
+         "number": "6",
+         "position": "6",
+         "Driver": {
+          "driverId": "test_foxtrot",
+          "code": "TDF",
+          "permanentNumber": "6",
+          "givenName": "Test Driver",
+          "familyName": "Foxtrot",
+          "nationality": "Japanese"
+         },
+         "Constructor": {
+          "name": "Team Charlie"
+         },
+         "Q1": "1:32.000",
+         "Q2": null,
+         "Q3": null
+        }
+       ]
+      }
+     ]
+    }
+   }
   }
  },
  "openf1": {
   "/sessions": [
+   {
+    "session_key": 9990,
+    "session_name": "Practice 1",
+    "year": 2024,
+    "date_start": "2024-02-29T11:30:00+00:00",
+    "date_end": "2024-02-29T12:30:00+00:00"
+   },
    {
     "session_key": 9999,
     "session_name": "Race",
@@ -2074,6 +2241,54 @@
    },
    {
     "session_key": 9999,
+    "driver_number": 6,
+    "name_acronym": "TDF",
+    "full_name": "TEST DRIVER FOXTROT",
+    "team_name": "Team Charlie",
+    "team_colour": "FF8000"
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 1,
+    "name_acronym": "TDA",
+    "full_name": "TEST DRIVER ALPHA",
+    "team_name": "Team Alpha",
+    "team_colour": "E8002D"
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 2,
+    "name_acronym": "TDB",
+    "full_name": "TEST DRIVER BRAVO",
+    "team_name": "Team Alpha",
+    "team_colour": "E8002D"
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 3,
+    "name_acronym": "TDC",
+    "full_name": "TEST DRIVER CHARLIE",
+    "team_name": "Team Bravo",
+    "team_colour": "27F4D2"
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 4,
+    "name_acronym": "TDD",
+    "full_name": "TEST DRIVER DELTA",
+    "team_name": "Team Bravo",
+    "team_colour": "27F4D2"
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 5,
+    "name_acronym": "TDE",
+    "full_name": "TEST DRIVER ECHO",
+    "team_name": "Team Charlie",
+    "team_colour": "FF8000"
+   },
+   {
+    "session_key": 9990,
     "driver_number": 6,
     "name_acronym": "TDF",
     "full_name": "TEST DRIVER FOXTROT",
@@ -3150,6 +3365,150 @@
     "lap_number": 20,
     "date_start": "2024-03-02T15:29:55.823000+00:00",
     "lap_duration": 93.181,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 1,
+    "lap_number": 1,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 1,
+    "lap_number": 2,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 92.7,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 1,
+    "lap_number": 3,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 92.4,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 2,
+    "lap_number": 1,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.2,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 2,
+    "lap_number": 2,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 92.9,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 2,
+    "lap_number": 3,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 92.6,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 3,
+    "lap_number": 1,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.4,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 3,
+    "lap_number": 2,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.1,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 3,
+    "lap_number": 3,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 92.8,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 4,
+    "lap_number": 1,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.6,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 4,
+    "lap_number": 2,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.3,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 4,
+    "lap_number": 3,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.0,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 5,
+    "lap_number": 1,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.8,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 5,
+    "lap_number": 2,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.5,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 5,
+    "lap_number": 3,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.2,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 6,
+    "lap_number": 1,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 94.0,
+    "is_pit_out_lap": true
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 6,
+    "lap_number": 2,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.7,
+    "is_pit_out_lap": false
+   },
+   {
+    "session_key": 9990,
+    "driver_number": 6,
+    "lap_number": 3,
+    "date_start": "2024-02-29T11:40:00+00:00",
+    "lap_duration": 93.4,
     "is_pit_out_lap": false
    }
   ],
@@ -54600,6 +54959,516 @@
     "message": "CHEQUERED FLAG",
     "date": "2024-03-02T15:31:00+00:00"
    }
+  ],
+  "/weather": [
+   {
+    "session_key": 9999,
+    "date": "2024-03-02T15:00:00+00:00",
+    "air_temperature": 24.0,
+    "track_temperature": 38.0,
+    "humidity": 55,
+    "rainfall": 0
+   },
+   {
+    "session_key": 9999,
+    "date": "2024-03-02T15:05:00+00:00",
+    "air_temperature": 24.166666666666668,
+    "track_temperature": 38.333333333333336,
+    "humidity": 55,
+    "rainfall": 0
+   },
+   {
+    "session_key": 9999,
+    "date": "2024-03-02T15:10:00+00:00",
+    "air_temperature": 24.333333333333332,
+    "track_temperature": 38.666666666666664,
+    "humidity": 55,
+    "rainfall": 0
+   },
+   {
+    "session_key": 9999,
+    "date": "2024-03-02T15:15:00+00:00",
+    "air_temperature": 24.5,
+    "track_temperature": 39.0,
+    "humidity": 55,
+    "rainfall": 0
+   },
+   {
+    "session_key": 9999,
+    "date": "2024-03-02T15:20:00+00:00",
+    "air_temperature": 24.666666666666668,
+    "track_temperature": 39.333333333333336,
+    "humidity": 55,
+    "rainfall": 0
+   },
+   {
+    "session_key": 9999,
+    "date": "2024-03-02T15:25:00+00:00",
+    "air_temperature": 24.833333333333332,
+    "track_temperature": 39.666666666666664,
+    "humidity": 55,
+    "rainfall": 0
+   },
+   {
+    "session_key": 9999,
+    "date": "2024-03-02T15:30:00+00:00",
+    "air_temperature": 25.0,
+    "track_temperature": 40.0,
+    "humidity": 55,
+    "rainfall": 0
+   }
   ]
+ },
+ "openmeteo": {
+  "/forecast": {
+   "latitude": 10.5,
+   "longitude": 20.25,
+   "hourly": {
+    "time": [
+     "2024-02-29T00:00",
+     "2024-02-29T01:00",
+     "2024-02-29T02:00",
+     "2024-02-29T03:00",
+     "2024-02-29T04:00",
+     "2024-02-29T05:00",
+     "2024-02-29T06:00",
+     "2024-02-29T07:00",
+     "2024-02-29T08:00",
+     "2024-02-29T09:00",
+     "2024-02-29T10:00",
+     "2024-02-29T11:00",
+     "2024-02-29T12:00",
+     "2024-02-29T13:00",
+     "2024-02-29T14:00",
+     "2024-02-29T15:00",
+     "2024-02-29T16:00",
+     "2024-02-29T17:00",
+     "2024-02-29T18:00",
+     "2024-02-29T19:00",
+     "2024-02-29T20:00",
+     "2024-02-29T21:00",
+     "2024-02-29T22:00",
+     "2024-02-29T23:00",
+     "2024-03-01T00:00",
+     "2024-03-01T01:00",
+     "2024-03-01T02:00",
+     "2024-03-01T03:00",
+     "2024-03-01T04:00",
+     "2024-03-01T05:00",
+     "2024-03-01T06:00",
+     "2024-03-01T07:00",
+     "2024-03-01T08:00",
+     "2024-03-01T09:00",
+     "2024-03-01T10:00",
+     "2024-03-01T11:00",
+     "2024-03-01T12:00",
+     "2024-03-01T13:00",
+     "2024-03-01T14:00",
+     "2024-03-01T15:00",
+     "2024-03-01T16:00",
+     "2024-03-01T17:00",
+     "2024-03-01T18:00",
+     "2024-03-01T19:00",
+     "2024-03-01T20:00",
+     "2024-03-01T21:00",
+     "2024-03-01T22:00",
+     "2024-03-01T23:00",
+     "2024-03-02T00:00",
+     "2024-03-02T01:00",
+     "2024-03-02T02:00",
+     "2024-03-02T03:00",
+     "2024-03-02T04:00",
+     "2024-03-02T05:00",
+     "2024-03-02T06:00",
+     "2024-03-02T07:00",
+     "2024-03-02T08:00",
+     "2024-03-02T09:00",
+     "2024-03-02T10:00",
+     "2024-03-02T11:00",
+     "2024-03-02T12:00",
+     "2024-03-02T13:00",
+     "2024-03-02T14:00",
+     "2024-03-02T15:00",
+     "2024-03-02T16:00",
+     "2024-03-02T17:00",
+     "2024-03-02T18:00",
+     "2024-03-02T19:00",
+     "2024-03-02T20:00",
+     "2024-03-02T21:00",
+     "2024-03-02T22:00",
+     "2024-03-02T23:00"
+    ],
+    "temperature_2m": [
+     17.8,
+     16.8,
+     16.2,
+     16.0,
+     16.2,
+     16.8,
+     17.8,
+     19.0,
+     20.4,
+     22.0,
+     23.6,
+     25.0,
+     26.2,
+     27.2,
+     27.8,
+     28.0,
+     27.8,
+     27.2,
+     26.2,
+     25.0,
+     23.6,
+     22.0,
+     20.4,
+     19.0,
+     17.8,
+     16.8,
+     16.2,
+     16.0,
+     16.2,
+     16.8,
+     17.8,
+     19.0,
+     20.4,
+     22.0,
+     23.6,
+     25.0,
+     26.2,
+     27.2,
+     27.8,
+     28.0,
+     27.8,
+     27.2,
+     26.2,
+     25.0,
+     23.6,
+     22.0,
+     20.4,
+     19.0,
+     17.8,
+     16.8,
+     16.2,
+     16.0,
+     16.2,
+     16.8,
+     17.8,
+     19.0,
+     20.4,
+     22.0,
+     23.6,
+     25.0,
+     26.2,
+     27.2,
+     27.8,
+     28.0,
+     27.8,
+     27.2,
+     26.2,
+     25.0,
+     23.6,
+     22.0,
+     20.4,
+     19.0
+    ],
+    "precipitation_probability": [
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     10,
+     20,
+     20,
+     20,
+     20,
+     20,
+     20,
+     20,
+     20,
+     20,
+     20,
+     20,
+     20,
+     60,
+     60,
+     60,
+     60,
+     60,
+     20,
+     20,
+     20,
+     20,
+     20,
+     20,
+     20
+    ],
+    "precipitation": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.2,
+     1.2,
+     1.2,
+     1.2,
+     1.2,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "wind_speed_10m": [
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0,
+     12.0
+    ],
+    "cloud_cover": [
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30,
+     30
+    ]
+   }
+  }
  }
 }

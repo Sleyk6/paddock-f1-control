@@ -220,3 +220,11 @@ svg.minityres { width: 120px; height: 12px; display: block; }
 .teamchip { display: inline-block; width: 4px; height: 14px; margin-right: 8px; vertical-align: -2px; background: var(--dim); }
 .dpos svg.flag { vertical-align: -3px; margin-left: 6px; }
 td.drv svg.flag { margin-left: -2px; }
+
+/* ---------- v0.3: weekend ---------- */
+.pill { display: inline-block; padding: 3px 9px; margin: 0 6px 6px 0; font: 11px var(--mono); letter-spacing: .08em; text-transform: uppercase;
+  border: 1px solid var(--edge-hi); color: var(--muted); }
+.pill.done { color: var(--ok); border-color: var(--ok); }
+tr.q2out td, tr.q1out td { color: var(--muted); }
+tr.q1out td { opacity: .7; }
+.warn { color: var(--warn); }
